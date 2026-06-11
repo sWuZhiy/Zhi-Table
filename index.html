@@ -1,0 +1,633 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI 智能课表规划舱 - 学术极客版 v5.0</title>
+  
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+
+  <style>
+    /* Webkit 全局定制精美滚动条 */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
+    ::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
+
+    /* FullCalendar 学术风深度定制 */
+    .fc { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; --fc-border-color: #e2e8f0; --fc-today-bg-color: #f0fdf4; }
+    .fc .fc-toolbar-title { font-size: 1.15rem!important; font-weight: 800; color: #1e293b; letter-spacing: 0.5px; }
+    .fc .fc-button-primary { background-color: #4f46e5!important; border: none!important; border-radius: 0.5rem!important; padding: 0.35rem 0.85rem!important; font-weight: 600!important; font-size: 0.8rem!important; transition: all 0.2s; }
+    .fc .fc-button-primary:hover { background-color: #4338ca!important; transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2); }
+    .fc-theme-standard td, .fc-theme-standard th { border: 1px solid #f1f5f9!important; }
+    .fc-timegrid-slot { height: 3.5rem!important; } /* 加高时间槽位，便于拖放 */
+    .fc-v-event { border-radius: 6px!important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid rgba(255,255,255,0.2)!important; transition: transform 0.1s;}
+    .fc-v-event:hover { transform: scale(1.02); z-index: 10; }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col antialiased selection:bg-indigo-100 selection:text-indigo-900">
+
+  <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 py-3.5 px-6 flex items-center justify-between shadow-sm sticky top-0 z-40">
+    <div class="flex items-center gap-3">
+      <div class="bg-indigo-600 p-2 rounded-xl text-white shadow-md shadow-indigo-200 flex items-center justify-center">
+        <i data-lucide="cpu" class="w-5 h-5"></i>
+      </div>
+      <div>
+        <h1 class="text-base font-extrabold text-slate-800 leading-tight">AI 智能科研排程舱</h1>
+        <p class="text-[10px] text-slate-400 font-medium">Model-Agnostic · Serverless 本地安全演算</p>
+      </div>
+    </div>
+    
+    <div class="flex items-center gap-3">
+      <div id="networkStatus" class="hidden items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-50 border border-emerald-100">
+        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+        <span class="text-[9px] font-bold text-emerald-700">API 连通</span>
+      </div>
+      
+      <button onclick="toggleApiSettings()" class="text-slate-600 hover:text-indigo-600 flex items-center gap-1.5 text-xs font-bold bg-slate-100 hover:bg-indigo-50 px-3.5 py-2 rounded-lg transition-all">
+        <i data-lucide="settings-2" class="w-4 h-4"></i>
+        <span>网关与密钥配置</span>
+      </button>
+      <button onclick="exportIcsCalendar()" class="flex items-center gap-1.5 bg-slate-900 text-white font-bold text-xs px-4 py-2 rounded-lg hover:bg-slate-800 transition-all shadow-md active:scale-95">
+        <i data-lucide="calendar-arrow-down" class="w-4 h-4"></i>
+        <span>导出 ICS 日历</span>
+      </button>
+    </div>
+  </header>
+
+  <div id="apiPanel" class="hidden bg-white border-b border-slate-200 p-6 shadow-lg shadow-slate-200/50 transition-all absolute w-full z-30">
+    <div class="max-w-5xl mx-auto">
+      <div class="flex items-center justify-between mb-5">
+        <div class="flex items-center gap-2">
+          <i data-lucide="server" class="text-indigo-600 w-5 h-5"></i>
+          <h3 class="text-sm font-bold text-slate-800">模型网关接入点配置 <span class="text-[10px] font-normal text-slate-400 ml-2">所有密钥数据基于 LocalStorage 浏览器本地加密，不经过任何第三方服务器。</span></h3>
+        </div>
+        <div class="flex items-center gap-2">
+          <button onclick="saveApiKeys()" class="flex items-center gap-1.5 bg-emerald-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-600 transition-all shadow-sm">
+            <i data-lucide="save" class="w-3.5 h-3.5"></i><span>持久化保存</span>
+          </button>
+          <button onclick="testApiKey()" id="testKeyBtn" class="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-700 transition-all shadow-sm">
+            <i data-lucide="activity" class="w-3.5 h-3.5"></i><span>发起 Ping 测试</span>
+          </button>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div>
+          <label class="block text-[11px] font-bold text-slate-600 mb-1.5">1. Base URL 接口地址 (支持列表选择)</label>
+          <input list="url-presets" type="text" id="apiBaseUrl" placeholder="例如: https://api.deepseek.com/v1/chat/completions" class="w-full p-2.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-mono bg-slate-50">
+          <datalist id="url-presets">
+            <option value="https://ark.cn-beijing.volces.com/api/v3/chat/completions" label="火山引擎(豆包) 官方直连"></option>
+            <option value="https://api.deepseek.com/chat/completions" label="DeepSeek 官方直连"></option>
+            <option value="https://corsproxy.io/?https://ark.cn-beijing.volces.com/api/v3/chat/completions" label="[免插件] 火山引擎公共跨域代理"></option>
+          </datalist>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-600 mb-1.5">2. 模型接入点 (Model ID)</label>
+          <input list="model-presets" type="text" id="modelName" placeholder="如: ep-xxx 或 deepseek-chat" class="w-full p-2.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-mono bg-slate-50">
+          <datalist id="model-presets">
+            <option value="deepseek-chat" label="DeepSeek V3"></option>
+            <option value="deepseek-reasoner" label="DeepSeek R1"></option>
+          </datalist>
+        </div>
+        <div>
+          <label class="block text-[11px] font-bold text-slate-600 mb-1.5">3. 鉴权令牌 (API Key)</label>
+          <div class="relative">
+            <input type="password" id="apiKey" placeholder="sk-..." class="w-full p-2.5 pr-8 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-mono bg-slate-50">
+            <button type="button" onclick="toggleVisibility('apiKey')" class="absolute right-3 top-2.5 text-slate-400 hover:text-indigo-600 transition-colors">
+              <i data-lucide="eye" class="w-4 h-4"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <main class="flex-1 max-w-[1600px] w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0 relative">
+    
+    <div class="lg:col-span-4 flex flex-col gap-5 overflow-y-auto max-h-[calc(100vh-100px)] pr-1">
+      
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+        <div class="flex items-center gap-2 mb-2">
+          <i data-lucide="sparkles" class="text-indigo-500 w-5 h-5"></i>
+          <h2 class="text-xs font-bold text-slate-800 uppercase tracking-widest">目标导向型自适应排程</h2>
+        </div>
+        <p class="text-[11px] text-slate-500 mb-4 leading-relaxed">基于当前日历数据拓扑图，通过自然语言指令，呼叫大模型智能寻找黄金空余时间切片并生成规划。</p>
+        
+        <form onsubmit="runAiPlanner(event)" class="flex flex-col gap-4">
+          <div>
+            <label class="block text-[10px] font-bold text-slate-600 mb-1.5">学术与科研目标声明</label>
+            <textarea id="goalText" placeholder="例如：编写并验证 DMRG 算法的测试代码，本周共需约 4 小时，尽量安排在下午且避开组会和休息时间。" class="w-full p-3 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 min-h-[70px] resize-none transition-all" required></textarea>
+          </div>
+          <div>
+            <div class="flex items-center justify-between text-[10px] font-bold text-slate-600 mb-2">
+              <span>单周期望规划总时长</span>
+              <span id="hoursLabel" class="text-indigo-600 font-extrabold bg-indigo-50 px-2 py-0.5 rounded">4 小时</span>
+            </div>
+            <input type="range" id="hoursInput" min="1" max="10" value="4" oninput="document.getElementById('hoursLabel').innerText = this.value + ' 小时'" class="w-full accent-indigo-600">
+          </div>
+          <button type="submit" id="planBtn" class="w-full py-3 bg-slate-900 hover:bg-slate-800 rounded-xl text-white font-bold text-xs shadow-md shadow-slate-900/20 transition-all flex items-center justify-center gap-2 active:scale-95 group">
+            <i data-lucide="bot" class="w-4 h-4 group-hover:animate-bounce"></i>
+            <span id="planBtnText">启动 AI 规划演算引擎</span>
+          </button>
+        </form>
+      </div>
+
+      <div id="thinkingBox" class="hidden bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 p-5 rounded-2xl flex flex-col gap-3 shadow-inner">
+        <div class="flex items-center justify-between border-b border-indigo-200/60 pb-2">
+          <div class="flex items-center gap-2">
+            <div class="bg-indigo-100 p-1 rounded-full"><i data-lucide="message-square-dashed" class="w-3.5 h-3.5 text-indigo-700"></i></div>
+            <span class="text-[11px] text-indigo-800 font-bold uppercase tracking-wider">AI 助理分析报告</span>
+          </div>
+          <button onclick="document.getElementById('thinkingBox').classList.add('hidden')" class="text-indigo-400 hover:text-indigo-700 p-1 bg-white/50 rounded-md transition-colors"><i data-lucide="x" class="w-3 h-3"></i></button>
+        </div>
+        <div id="thinkingContent" class="text-[12px] leading-relaxed text-slate-700 font-medium tracking-wide"></div>
+      </div>
+
+      <div id="errorAlert" class="hidden bg-rose-50 border border-rose-200 p-4 rounded-2xl flex gap-3 text-rose-800 shadow-sm">
+        <i data-lucide="shield-alert" class="w-4 h-4 flex-shrink-0 mt-0.5"></i>
+        <div class="text-[11px] leading-relaxed">
+          <span class="font-bold block mb-0.5">运行时拦截异常</span>
+          <span id="errorMsg" class="opacity-90"></span>
+        </div>
+      </div>
+
+      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex-1 min-h-[220px] overflow-y-auto flex flex-col">
+        <div class="flex items-center justify-between text-slate-800 font-bold text-xs mb-4">
+          <div class="flex items-center gap-1.5">
+            <i data-lucide="database" class="w-4 h-4 text-slate-500"></i>
+            <span>日历数据节点 (<span id="courseCount">0</span>)</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <button onclick="openAddCourseForm()" class="text-indigo-600 hover:text-white text-[10px] font-bold px-2 py-1 rounded border border-indigo-200 hover:bg-indigo-600 transition-colors">手工新增</button>
+            <input type="file" id="importCoursesFile" accept=".json" class="hidden" onchange="handleImportCoursesFile(event)">
+            <button onclick="exportCoursesJson()" class="text-slate-500 hover:text-slate-800 text-[10px] font-bold px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded transition-colors" title="导出备份">导出</button>
+            <button onclick="importCoursesJson()" class="text-slate-500 hover:text-slate-800 text-[10px] font-bold px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded transition-colors" title="导入备份">导入</button>
+            <button onclick="clearAllEvents()" class="text-rose-500 hover:text-white text-[10px] font-bold px-2 py-1 border border-rose-200 hover:bg-rose-500 rounded transition-colors" title="清空全部">清空</button>
+          </div>
+        </div>
+        <div id="coursesList" class="flex flex-col gap-2.5"></div>
+      </div>
+    </div>
+
+    <div class="lg:col-span-8 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[700px] lg:h-[800px]">
+      <div id="calendar" class="w-full h-full"></div>
+    </div>
+
+    <div id="addCoursePanel" class="hidden fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center backdrop-blur-sm transition-opacity">
+      <div class="bg-white p-6 rounded-2xl w-[340px] shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+        <h3 class="text-sm font-bold mb-4 text-slate-800 flex items-center gap-2"><i data-lucide="edit-3" class="w-4 h-4 text-indigo-500"></i>编辑数据节点</h3>
+        <div class="flex flex-col gap-3.5 text-xs">
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 mb-1">事件名称</label>
+            <input id="newTitle" placeholder="如：高等量子力学" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-indigo-500 focus:outline-none">
+          </div>
+          <div class="flex gap-3">
+            <div class="w-1/2">
+              <label class="block text-[10px] font-bold text-slate-500 mb-1">星期跨度</label>
+              <select id="newDay" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-indigo-500 focus:outline-none">
+                <option value="1">周一</option><option value="2">周二</option><option value="3">周三</option>
+                <option value="4">周四</option><option value="5">周五</option><option value="6">周六</option><option value="7">周日</option>
+              </select>
+            </div>
+            <div class="w-1/2">
+              <label class="block text-[10px] font-bold text-slate-500 mb-1">空间地点</label>
+              <input id="newLocation" placeholder="教室或实验室" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-indigo-500 focus:outline-none">
+            </div>
+          </div>
+          <div class="flex gap-3">
+            <div class="w-1/2">
+              <label class="block text-[10px] font-bold text-slate-500 mb-1">开始时间</label>
+              <input id="newStart" type="time" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-indigo-500 focus:outline-none">
+            </div>
+            <div class="w-1/2">
+              <label class="block text-[10px] font-bold text-slate-500 mb-1">结束时间</label>
+              <input id="newEnd" type="time" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-indigo-500 focus:outline-none">
+            </div>
+          </div>
+          <div>
+            <label class="block text-[10px] font-bold text-slate-500 mb-1">图例色彩标记</label>
+            <div class="flex items-center gap-3">
+              <input id="newColor" type="color" value="#4f46e5" class="w-10 h-10 p-1 border border-slate-200 rounded-lg cursor-pointer bg-slate-50">
+              <span class="text-[10px] text-slate-400">点击左侧色块选取</span>
+            </div>
+          </div>
+          <div class="flex items-center justify-end gap-2 mt-4 pt-4 border-t border-slate-100">
+            <button onclick="closeAddCourseForm()" class="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">取消丢弃</button>
+            <button onclick="saveNewCourse()" class="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-md transition-transform active:scale-95">提交写入</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script>
+    // 默认内置的占位学术日程，契合科研场景
+    let courses = [
+      { id: 'c1', title: '现代数学物理方程', dayOfWeek: 1, startTime: '08:00', endTime: '09:30', color: '#3b82f6', location: '教1-102', isAiGenerated: false },
+      { id: 'c2', title: '量子光学组会', dayOfWeek: 2, startTime: '10:00', endTime: '12:00', color: '#8b5cf6', location: '实验室', isAiGenerated: false }
+    ];
+    let calendarInstance = null;
+    let typeWriterInterval = null;
+
+    // --- 初始化与页面挂载 ---
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('apiBaseUrl').value = localStorage.getItem('apiBaseUrl') || '';
+      document.getElementById('modelName').value = localStorage.getItem('modelName') || '';
+      document.getElementById('apiKey').value = localStorage.getItem('apiKey') || '';
+      
+      checkNetworkStatusDisplay();
+      loadCoursesFromStorage();
+      lucide.createIcons();
+      initFullCalendar();
+      renderCoursesList();
+    });
+
+    // --- API 配置层逻辑 ---
+    function getApiConfig() {
+      return {
+        baseUrl: document.getElementById('apiBaseUrl').value.trim(),
+        model: document.getElementById('modelName').value.trim(),
+        key: document.getElementById('apiKey').value.trim()
+      };
+    }
+
+    function toggleApiSettings() { 
+      const panel = document.getElementById('apiPanel');
+      panel.classList.toggle('hidden'); 
+    }
+    
+    function toggleVisibility(id) { 
+      const el = document.getElementById(id); 
+      el.type = el.type === 'password' ? 'text' : 'password'; 
+    }
+
+    function saveApiKeys() {
+      localStorage.setItem('apiBaseUrl', document.getElementById('apiBaseUrl').value.trim());
+      localStorage.setItem('modelName', document.getElementById('modelName').value.trim());
+      localStorage.setItem('apiKey', document.getElementById('apiKey').value.trim());
+      checkNetworkStatusDisplay();
+      showToast("网关配置已加密写入本地沙箱！");
+    }
+
+    function checkNetworkStatusDisplay() {
+      const key = localStorage.getItem('apiKey');
+      const light = document.getElementById('networkStatus');
+      if(key) light.classList.remove('hidden');
+      else light.classList.add('hidden');
+    }
+
+    async function testApiKey() {
+      const config = getApiConfig();
+      if (!config.baseUrl || !config.key || !config.model) {
+        showErrorAlert(true, "请完整填写接口地址、模型名称和密钥。"); return;
+      }
+      const btn = document.getElementById('testKeyBtn');
+      const original = btn.innerHTML;
+      btn.disabled = true; btn.innerHTML = '<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i><span>握手中...</span>';
+      lucide.createIcons();
+
+      try {
+        await axios.post(config.baseUrl, {
+          model: config.model,
+          messages: [{ role: 'user', content: 'Reply "pong" strictly' }],
+          max_tokens: 5
+        }, { headers: { "Content-Type": "application/json", "Authorization": `Bearer ${config.key}` } });
+        
+        showToast("网关连通测试成功！API 通道畅通。");
+        showErrorAlert(false);
+      } catch (err) {
+        const errMsg = err.response ? `云端拒绝 (${err.response.status})` : '跨域拦截(CORS) 或 网络故障。如遇 CORS，请选择跨域代理预设。';
+        showErrorAlert(true, `握手失败: ${errMsg}`);
+      } finally {
+        btn.disabled = false; btn.innerHTML = original; lucide.createIcons();
+      }
+    }
+
+    // --- 核心数据存取与导出模块 ---
+    function persistCourses() { localStorage.setItem('courses', JSON.stringify(courses || [])); }
+    function loadCoursesFromStorage() {
+      try { const raw = localStorage.getItem('courses'); if (raw) { const parsed = JSON.parse(raw); if (Array.isArray(parsed)) courses = parsed; } } catch(e){}
+    }
+    
+    function exportCoursesJson() {
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(new Blob([JSON.stringify(courses, null, 2)], { type: 'application/json' }));
+      a.download = `academic_schedule_${new Date().getTime()}.json`;
+      a.click(); URL.revokeObjectURL(a.href);
+      showToast('日历拓扑 JSON 文件已离线导出');
+    }
+    
+    function importCoursesJson() { document.getElementById('importCoursesFile').click(); }
+    function handleImportCoursesFile(e) {
+      const file = e.target.files[0]; if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => { 
+        try { 
+          courses = JSON.parse(reader.result); renderCoursesList(); persistCourses(); showToast('外部数据流同步成功'); 
+        } catch(err) { showErrorAlert(true, '文件解析失败，请确保格式为严格 JSON'); } 
+      };
+      reader.readAsText(file);
+    }
+
+    // --- 日程 CRUD UI 操作 ---
+    function openAddCourseForm(id) {
+      const panel = document.getElementById('addCoursePanel'); 
+      panel.classList.remove('hidden');
+      if (id) {
+        const c = courses.find(x => x.id === id);
+        if(c) { 
+          document.getElementById('newTitle').value = c.title; 
+          document.getElementById('newDay').value = c.dayOfWeek; 
+          document.getElementById('newStart').value = c.startTime; 
+          document.getElementById('newEnd').value = c.endTime; 
+          document.getElementById('newLocation').value = c.location || ''; 
+          document.getElementById('newColor').value = c.color; 
+          panel.dataset.editId = id; 
+        }
+      } else { 
+        document.getElementById('newTitle').value = ''; 
+        document.getElementById('newStart').value = '08:00'; 
+        document.getElementById('newEnd').value = '09:30'; 
+        delete panel.dataset.editId; 
+      }
+    }
+    
+    function closeAddCourseForm() { document.getElementById('addCoursePanel').classList.add('hidden'); }
+    
+    function saveNewCourse() {
+      const id = document.getElementById('addCoursePanel').dataset.editId;
+      const start = document.getElementById('newStart').value;
+      const end = document.getElementById('newEnd').value;
+      if(start >= end) { showToast('逻辑错误：结束时间必须晚于开始时间', 'error'); return; }
+
+      const data = { 
+        title: document.getElementById('newTitle').value.trim(), 
+        dayOfWeek: parseInt(document.getElementById('newDay').value), 
+        startTime: start, 
+        endTime: end, 
+        location: document.getElementById('newLocation').value.trim(), 
+        color: document.getElementById('newColor').value, 
+        isAiGenerated: false 
+      };
+      
+      if (!data.title) { showToast('必须填写事件名称', 'error'); return; }
+      
+      if (id) { courses = courses.map(c => c.id === id ? { ...c, ...data, id } : c); } 
+      else { courses.push({ ...data, id: 'node_' + Date.now() }); }
+      
+      closeAddCourseForm(); renderCoursesList(); persistCourses(); showToast('数据节点已更新并挂载');
+    }
+    
+    function deleteCourse(id) { courses = courses.filter(c => c.id !== id); renderCoursesList(); persistCourses(); }
+    function clearAllEvents() { if (confirm("危险操作：确定要截断并清空整个日历画布吗？")) { courses = []; renderCoursesList(); persistCourses(); } }
+
+    // --- FullCalendar 渲染层 ---
+    function initFullCalendar() {
+      calendarInstance = new FullCalendar.Calendar(document.getElementById('calendar'), {
+        initialView: 'timeGridWeek', 
+        headerToolbar: { left: 'prev,next today', center: 'title', right: 'timeGridWeek,timeGridDay' },
+        firstDay: 1, 
+        slotMinTime: '07:00:00', 
+        slotMaxTime: '23:30:00', 
+        allDaySlot: false, 
+        editable: true,
+        eventDrop: (i) => handleSync(i.event), 
+        eventResize: (i) => handleSync(i.event), 
+        events: getMappedEvents(),
+        eventContent: (arg) => ({ 
+          html: `
+            <div class="p-1.5 h-full flex flex-col justify-between cursor-move text-white text-[11px] leading-snug">
+              <div class="font-bold tracking-wide">${arg.event.extendedProps.isAiGenerated?'✨ ':''}${arg.event.title}</div>
+              <div class="opacity-90 font-mono text-[9px] mt-1 flex items-center justify-between">
+                <span>${arg.event.extendedProps.location?`📍${arg.event.extendedProps.location}`:''}</span>
+                <span>${arg.timeText}</span>
+              </div>
+            </div>` 
+        })
+      });
+      calendarInstance.render();
+    }
+
+    function getMappedEvents() {
+      const today = new Date(); 
+      const monday = new Date(today); 
+      monday.setDate(today.getDate() + (today.getDay() === 0 ? -6 : 1 - today.getDay())); 
+      monday.setHours(0,0,0,0);
+      
+      return courses.map(c => {
+        const d = new Date(monday); d.setDate(monday.getDate() + c.dayOfWeek - 1);
+        const s = new Date(d); s.setHours(...c.startTime.split(':'));
+        const e = new Date(d); e.setHours(...c.endTime.split(':'));
+        return { 
+          id: c.id, title: c.title, start: s.toISOString(), end: e.toISOString(), 
+          backgroundColor: c.color, borderColor: c.color, 
+          extendedProps: { isAiGenerated: c.isAiGenerated, location: c.location } 
+        };
+      });
+    }
+
+    function handleSync(fcEvent) {
+      const d = fcEvent.start.getDay() || 7; const pad = v => String(v).padStart(2,'0');
+      const start = `${pad(fcEvent.start.getHours())}:${pad(fcEvent.start.getMinutes())}`; 
+      const end = `${pad(fcEvent.end.getHours())}:${pad(fcEvent.end.getMinutes())}`;
+      courses = courses.map(c => c.id === fcEvent.id ? {...c, dayOfWeek: d, startTime: start, endTime: end} : c);
+      renderCoursesList(); persistCourses();
+    }
+
+    function renderCoursesList() {
+      const ctn = document.getElementById('coursesList'); ctn.innerHTML = ''; 
+      document.getElementById('courseCount').innerText = courses.length;
+      
+      if (!courses.length) { 
+        ctn.innerHTML = `
+          <div class="h-full flex flex-col items-center justify-center py-10 opacity-60">
+            <i data-lucide="inbox" class="w-8 h-8 text-slate-400 mb-2"></i>
+            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">无挂载数据</p>
+          </div>`; 
+        lucide.createIcons(); return; 
+      }
+
+      courses.forEach(c => {
+        const d = document.createElement('div'); 
+        d.className = 'p-3 border rounded-xl group bg-slate-50 hover:bg-white hover:border-indigo-200 hover:shadow-sm flex justify-between items-center transition-all';
+        d.innerHTML = `
+          <div class="flex items-center gap-3 min-w-0">
+            <div class="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm" style="background-color:${c.color}"></div>
+            <div class="truncate leading-tight">
+              <p class="text-xs font-bold text-slate-800 truncate">${c.title}</p>
+              <p class="text-[10px] text-slate-500 font-mono mt-1 flex items-center gap-2">
+                <span class="bg-slate-200 px-1.5 py-0.5 rounded text-[9px]">周${['一','二','三','四','五','六','日'][c.dayOfWeek-1]}</span>
+                <span>${c.startTime} - ${c.endTime}</span>
+              </p>
+            </div>
+          </div>
+          <div class="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
+            <button onclick="openAddCourseForm('${c.id}')" class="text-slate-400 hover:text-indigo-600 p-1.5 bg-slate-100 hover:bg-indigo-50 rounded-md transition-colors"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
+            <button onclick="deleteCourse('${c.id}')" class="text-slate-400 hover:text-rose-500 p-1.5 bg-slate-100 hover:bg-rose-50 rounded-md transition-colors"><i data-lucide="trash" class="w-3.5 h-3.5"></i></button>
+          </div>`;
+        ctn.appendChild(d);
+      });
+      lucide.createIcons(); 
+      if (calendarInstance) { calendarInstance.removeAllEvents(); calendarInstance.addEventSource(getMappedEvents()); }
+    }
+
+    // --- UX 打字机动效 ---
+    function typeWriter(element, text, speed = 25) {
+      if(typeWriterInterval) clearInterval(typeWriterInterval);
+      element.innerHTML = '';
+      let i = 0;
+      typeWriterInterval = setInterval(() => {
+        if (i < text.length) {
+          element.innerHTML += text.charAt(i);
+          i++;
+        } else {
+          clearInterval(typeWriterInterval);
+        }
+      }, speed);
+    }
+
+    // --- 核心 AI 排程算法引擎 ---
+    async function runAiPlanner(event) {
+      event.preventDefault();
+      const goal = document.getElementById('goalText').value.trim(); 
+      const hours = document.getElementById('hoursInput').value;
+      const config = getApiConfig(); 
+      
+      const btn = document.getElementById('planBtn'); 
+      const btnText = document.getElementById('planBtnText');
+      
+      // UX 动态加载提示
+      const loadingPhrases = ["解析时间拓扑...", "搜寻可用区块...", "计算物理防碰撞...", "生成 JSON 载荷..."];
+      let phraseIdx = 0;
+      btn.disabled = true; 
+      btn.classList.add('opacity-80', 'cursor-not-allowed');
+      
+      const loadingInterval = setInterval(() => {
+        btnText.innerText = loadingPhrases[phraseIdx % loadingPhrases.length];
+        phraseIdx++;
+      }, 1500);
+      btnText.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin inline-block mr-2"></i> ${loadingPhrases[0]}`;
+      lucide.createIcons();
+
+      if (!config.key) { 
+        // 极速 Demo Fallback
+        setTimeout(() => {
+          clearInterval(loadingInterval);
+          courses.push({ id: 'a1', title: '模拟安排: ' + goal, dayOfWeek: 4, startTime: '15:00', endTime: '17:00', color: '#f59e0b', location: '独立思考', isAiGenerated: true });
+          
+          document.getElementById('thinkingBox').classList.remove('hidden');
+          typeWriter(document.getElementById('thinkingContent'), "【Demo 降级演示】我检测到系统未配置模型 Key。为了不阻塞您的流程，已为您在周四下午规划了一段模拟排程。实战中，我会基于您指定的算法严格执行时间碎片的拼合。");
+          
+          renderCoursesList(); persistCourses(); triggerSuccessConfetti(); 
+          btn.disabled = false; btn.classList.remove('opacity-80', 'cursor-not-allowed'); btnText.innerText = "启动 AI 规划演算引擎";
+          showToast("Demo 演算完毕并落盘");
+        }, 1200);
+        return;
+      }
+
+      const prompt = `你是精通精力管理与统筹学的学术 AI 助理。请解析用户的当前日历拓扑，寻找符合要求的时间缝隙进行规划。
+      
+      【全局环境数据】
+      现存只读数据节点 (禁止覆盖): ${JSON.stringify(courses)}
+      需注入的目标任务: "${goal}"，预计总工时 ${hours} 小时。
+
+      【物理与逻辑约束】
+      1. 冲突规避：新任务的 startTime 和 endTime 绝对不能与上方提供的数据节点发生时间重叠。
+      2. 睡眠守卫：严格禁止安排在 23:00 到次日 08:00 之间。
+      3. 模块化切分：不要将 ${hours} 小时全堆在一起，请将其合理切分为单次 1.5 到 2 小时的时间块。
+
+      【严格输出规范 (JSON Mode)】
+      请务必直接返回符合以下结构的标准 JSON 格式，不要包含任何 markdown 代码块标记，不要包含其他说明文字。
+      {
+        "message": "以专业、极客的口吻解释你的编排算法逻辑（例如：避开了哪些高负载时段，为什么选择此时段）",
+        "plans": [
+          {"title": "精炼的任务名", "dayOfWeek": 3, "startTime": "14:00", "endTime": "16:00", "color": "#f59e0b"}
+        ]
+      }`;
+
+      try {
+        const response = await axios.post(config.baseUrl, {
+          model: config.model,
+          messages: [{ role: 'system', content: prompt }],
+          temperature: 0.2 // 调低温度保证 JSON 结构稳定性
+        }, { headers: { "Content-Type": "application/json", "Authorization": `Bearer ${config.key}` } });
+
+        const raw = response.data.choices[0].message.content;
+        
+        // 【抗毁伤提取算法】使用正则寻找最外层大括号，完美无视模型生成的幻觉 markdown 和前置寒暄
+        const jsonMatch = raw.match(/\{[\s\S]*\}/);
+        if(!jsonMatch) throw new Error("大模型未能返回合法的 JSON 结构边界");
+        
+        const parsed = JSON.parse(jsonMatch[0]);
+        
+        // 渲染 AI 打字机助理对话
+        document.getElementById('thinkingBox').classList.remove('hidden');
+        typeWriter(document.getElementById('thinkingContent'), parsed.message || "演算完毕。任务流已无冲突注入当前画布。");
+        
+        const plans = parsed.plans || [];
+        plans.forEach(p => { 
+          p.id = 'ai_' + Date.now() + Math.floor(Math.random() * 1000); 
+          p.isAiGenerated = true; 
+          if(!p.color) p.color = '#f59e0b'; 
+        });
+        
+        courses = [...courses, ...plans];
+        renderCoursesList(); persistCourses(); triggerSuccessConfetti(); showErrorAlert(false); 
+        showToast("自适应排定计算完成！");
+      } catch (err) {
+        showErrorAlert(true, `AI 推理流崩溃: ${err.message || '大模型网络阻断或发生跨域拒止 (CORS)'}`); 
+        console.error("AI Parser Error: ", err);
+      } finally { 
+        clearInterval(loadingInterval);
+        btn.disabled = false; btn.classList.remove('opacity-80', 'cursor-not-allowed');
+        btnText.innerText = "启动 AI 规划演算引擎";
+        lucide.createIcons(); 
+      }
+    }
+
+    // --- 导出标准 ICS ---
+    function exportIcsCalendar() {
+      if (!courses.length) { showToast("画布内存池为空，无法执行封卷", "error"); return; }
+      const pad = n => String(n).padStart(2,'0');
+      const fmt = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+      const now = fmt(new Date());
+      let ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Geek Academic AI Planner//EN'];
+      
+      getMappedEvents().forEach(e => {
+        ics.push('BEGIN:VEVENT', `UID:${e.id}@geek-planner`, `DTSTAMP:${now}`, `DTSTART:${fmt(new Date(e.start))}`, `DTEND:${fmt(new Date(e.end))}`, `SUMMARY:${e.title}`, `DESCRIPTION:${e.extendedProps.isAiGenerated?'✨ AI驱动智能排定':'人工配置流'}`, `LOCATION:${e.extendedProps.location||''}`, 'END:VEVENT');
+      });
+      ics.push('END:VCALENDAR');
+      
+      const a = document.createElement('a'); 
+      a.href = URL.createObjectURL(new Blob([ics.join('\r\n')], {type: 'text/calendar;charset=utf-8'})); 
+      a.download = `schedule_export_${new Date().getTime()}.ics`; 
+      document.body.appendChild(a); a.click(); document.body.removeChild(a); 
+      showToast("标准 ICS 日历文件已产出");
+    }
+
+    // --- 全局交互组件 ---
+    function showErrorAlert(show, txt="") { 
+      const alert = document.getElementById('errorAlert'); 
+      if(show) { alert.classList.remove('hidden'); document.getElementById('errorMsg').innerText = txt; } 
+      else alert.classList.add('hidden'); 
+    }
+    
+    function showToast(msg, type='success') {
+      const t = document.createElement('div'); 
+      t.className = `fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-5 py-3 rounded-full shadow-lg shadow-slate-200/50 text-white font-bold text-xs flex items-center gap-2 transition-all -translate-y-10 opacity-0 ${type === 'success'?'bg-slate-900':'bg-rose-600'}`;
+      t.innerHTML = `<i data-lucide="${type === 'success'?'check-circle-2':'alert-circle'}" class="w-4 h-4"></i><span class="tracking-wider">${msg}</span>`;
+      document.body.appendChild(t); 
+      lucide.createIcons(); 
+      setTimeout(() => t.classList.remove('-translate-y-10','opacity-0'), 50); 
+      setTimeout(() => { t.classList.add('-translate-y-10','opacity-0'); setTimeout(()=>t.remove(), 300); }, 3000);
+    }
+    
+    function triggerSuccessConfetti() { confetti({ particleCount: 150, spread: 80, origin: { y: 0.8 }, colors: ['#4f46e5', '#8b5cf6', '#f59e0b'] }); }
+  </script>
+</body>
+</html>
