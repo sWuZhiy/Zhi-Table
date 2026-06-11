@@ -1,633 +1,1308 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AI 智能课表规划舱 - 学术极客版 v5.0</title>
-  
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI 智能课表规划舱 - WeekUp 风格增强版 v7.0</title>
 
-  <style>
-    /* Webkit 全局定制精美滚动条 */
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background-color: #cbd5e1; border-radius: 10px; }
-    ::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; }
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/index.global.min.js">
+    </script>
+    <script src="https://unpkg.com/lucide@latest">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js">
+    </script>
 
-    /* FullCalendar 学术风深度定制 */
-    .fc { font-family: ui-sans-serif, system-ui, -apple-system, sans-serif; --fc-border-color: #e2e8f0; --fc-today-bg-color: #f0fdf4; }
-    .fc .fc-toolbar-title { font-size: 1.15rem!important; font-weight: 800; color: #1e293b; letter-spacing: 0.5px; }
-    .fc .fc-button-primary { background-color: #4f46e5!important; border: none!important; border-radius: 0.5rem!important; padding: 0.35rem 0.85rem!important; font-weight: 600!important; font-size: 0.8rem!important; transition: all 0.2s; }
-    .fc .fc-button-primary:hover { background-color: #4338ca!important; transform: translateY(-1px); box-shadow: 0 4px 6px -1px rgba(79, 70, 229, 0.2); }
-    .fc-theme-standard td, .fc-theme-standard th { border: 1px solid #f1f5f9!important; }
-    .fc-timegrid-slot { height: 3.5rem!important; } /* 加高时间槽位，便于拖放 */
-    .fc-v-event { border-radius: 6px!important; box-shadow: 0 2px 4px rgba(0,0,0,0.05); border: 1px solid rgba(255,255,255,0.2)!important; transition: transform 0.1s;}
-    .fc-v-event:hover { transform: scale(1.02); z-index: 10; }
-  </style>
+    <style>
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        ::-webkit-scrollbar-thumb {
+            background-color: #cbd5e1;
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background-color: #94a3b8;
+        }
+
+        .fc {
+            font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
+            --fc-border-color: #e2e8f0;
+            --fc-today-bg-color: #f0fdf4;
+            --fc-page-bg-color: #ffffff;
+        }
+        .fc .fc-toolbar-title {
+            font-size: 1.1rem !important;
+            font-weight: 700;
+            color: #1e293b;
+            letter-spacing: -0.01em;
+        }
+        .fc .fc-button-primary {
+            background-color: #4f46e5 !important;
+            border: none !important;
+            border-radius: 0.5rem !important;
+            padding: 0.35rem 0.8rem !important;
+            font-weight: 600 !important;
+            font-size: 0.78rem !important;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+            transition: all 0.15s;
+        }
+        .fc .fc-button-primary:hover {
+            background-color: #4338ca !important;
+            box-shadow: 0 2px 6px rgba(79, 70, 229, 0.25);
+        }
+        .fc .fc-button-primary:active {
+            transform: scale(0.96);
+        }
+        .fc-theme-standard td,
+        .fc-theme-standard th {
+            border: 1px solid #f1f5f9 !important;
+        }
+        .fc-timegrid-slot {
+            height: 3.2rem !important;
+        }
+        .fc-v-event {
+            border-radius: 7px !important;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.07);
+            border: 1px solid rgba(255, 255, 255, 0.25) !important;
+            transition: transform 0.12s, box-shadow 0.12s;
+            cursor: pointer;
+        }
+        .fc-v-event:hover {
+            transform: scale(1.025);
+            z-index: 10;
+            box-shadow: 0 6px 18px rgba(0, 0, 0, 0.13);
+        }
+        .fc-highlight {
+            background: rgba(79, 70, 229, 0.18) !important;
+            border-radius: 6px;
+        }
+        .fc-timegrid-now-indicator-line {
+            border-color: #ef4444 !important;
+            border-width: 2px !important;
+        }
+        .fc-timegrid-now-indicator-arrow {
+            border-color: #ef4444 !important;
+        }
+
+        /* 自定义动画 */
+        @keyframes slideDown {
+            from {
+                opacity: 0;
+                transform: translateY(-12px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        .animate-slide-down {
+            animation: slideDown 0.25s ease-out;
+        }
+        @keyframes pulse-ring {
+            0%,
+            100% {
+                box-shadow: 0 0 0 0 rgba(79, 70, 229, 0.35);
+            }
+            50% {
+                box-shadow: 0 0 0 10px rgba(79, 70, 229, 0);
+            }
+        }
+        .pulse-ring {
+            animation: pulse-ring 1.8s infinite;
+        }
+
+        .week-selector-option {
+            transition: background 0.1s;
+        }
+        .week-selector-option:hover {
+            background: #eef2ff;
+        }
+        .week-selector-option.current-week {
+            background: #e0e7ff;
+            font-weight: 700;
+            color: #4338ca;
+        }
+    </style>
 </head>
-<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col antialiased selection:bg-indigo-100 selection:text-indigo-900">
+<body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col antialiased">
 
-  <header class="bg-white/80 backdrop-blur-md border-b border-slate-200 py-3.5 px-6 flex items-center justify-between shadow-sm sticky top-0 z-40">
-    <div class="flex items-center gap-3">
-      <div class="bg-indigo-600 p-2 rounded-xl text-white shadow-md shadow-indigo-200 flex items-center justify-center">
-        <i data-lucide="cpu" class="w-5 h-5"></i>
-      </div>
-      <div>
-        <h1 class="text-base font-extrabold text-slate-800 leading-tight">AI 智能科研排程舱</h1>
-        <p class="text-[10px] text-slate-400 font-medium">Model-Agnostic · Serverless 本地安全演算</p>
-      </div>
-    </div>
-    
-    <div class="flex items-center gap-3">
-      <div id="networkStatus" class="hidden items-center gap-1.5 px-2 py-1 rounded-full bg-emerald-50 border border-emerald-100">
-        <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
-        <span class="text-[9px] font-bold text-emerald-700">API 连通</span>
-      </div>
-      
-      <button onclick="toggleApiSettings()" class="text-slate-600 hover:text-indigo-600 flex items-center gap-1.5 text-xs font-bold bg-slate-100 hover:bg-indigo-50 px-3.5 py-2 rounded-lg transition-all">
-        <i data-lucide="settings-2" class="w-4 h-4"></i>
-        <span>网关与密钥配置</span>
-      </button>
-      <button onclick="exportIcsCalendar()" class="flex items-center gap-1.5 bg-slate-900 text-white font-bold text-xs px-4 py-2 rounded-lg hover:bg-slate-800 transition-all shadow-md active:scale-95">
-        <i data-lucide="calendar-arrow-down" class="w-4 h-4"></i>
-        <span>导出 ICS 日历</span>
-      </button>
-    </div>
-  </header>
+    <!-- 顶部导航栏 -->
+    <header class="bg-white/85 backdrop-blur-md border-b border-slate-200 py-3 px-5 flex items-center justify-between shadow-sm sticky top-0 z-40">
+        <div class="flex items-center gap-3">
+            <div class="bg-indigo-600 p-2 rounded-xl text-white shadow-md flex items-center justify-center pulse-ring">
+                <i data-lucide="cpu" class="w-5 h-5"></i>
+            </div>
+            <div>
+                <h1 class="text-base font-extrabold text-slate-800 leading-tight">AI 智能科研排程舱</h1>
+                <p class="text-[10px] text-slate-400 font-medium">WeekUp 风格 · 鼠标拖拽建课 · AI 思维链推理</p>
+            </div>
+        </div>
 
-  <div id="apiPanel" class="hidden bg-white border-b border-slate-200 p-6 shadow-lg shadow-slate-200/50 transition-all absolute w-full z-30">
-    <div class="max-w-5xl mx-auto">
-      <div class="flex items-center justify-between mb-5">
-        <div class="flex items-center gap-2">
-          <i data-lucide="server" class="text-indigo-600 w-5 h-5"></i>
-          <h3 class="text-sm font-bold text-slate-800">模型网关接入点配置 <span class="text-[10px] font-normal text-slate-400 ml-2">所有密钥数据基于 LocalStorage 浏览器本地加密，不经过任何第三方服务器。</span></h3>
-        </div>
-        <div class="flex items-center gap-2">
-          <button onclick="saveApiKeys()" class="flex items-center gap-1.5 bg-emerald-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-600 transition-all shadow-sm">
-            <i data-lucide="save" class="w-3.5 h-3.5"></i><span>持久化保存</span>
-          </button>
-          <button onclick="testApiKey()" id="testKeyBtn" class="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-700 transition-all shadow-sm">
-            <i data-lucide="activity" class="w-3.5 h-3.5"></i><span>发起 Ping 测试</span>
-          </button>
-        </div>
-      </div>
-      
-      <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <div>
-          <label class="block text-[11px] font-bold text-slate-600 mb-1.5">1. Base URL 接口地址 (支持列表选择)</label>
-          <input list="url-presets" type="text" id="apiBaseUrl" placeholder="例如: https://api.deepseek.com/v1/chat/completions" class="w-full p-2.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-mono bg-slate-50">
-          <datalist id="url-presets">
-            <option value="https://ark.cn-beijing.volces.com/api/v3/chat/completions" label="火山引擎(豆包) 官方直连"></option>
-            <option value="https://api.deepseek.com/chat/completions" label="DeepSeek 官方直连"></option>
-            <option value="https://corsproxy.io/?https://ark.cn-beijing.volces.com/api/v3/chat/completions" label="[免插件] 火山引擎公共跨域代理"></option>
-          </datalist>
-        </div>
-        <div>
-          <label class="block text-[11px] font-bold text-slate-600 mb-1.5">2. 模型接入点 (Model ID)</label>
-          <input list="model-presets" type="text" id="modelName" placeholder="如: ep-xxx 或 deepseek-chat" class="w-full p-2.5 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-mono bg-slate-50">
-          <datalist id="model-presets">
-            <option value="deepseek-chat" label="DeepSeek V3"></option>
-            <option value="deepseek-reasoner" label="DeepSeek R1"></option>
-          </datalist>
-        </div>
-        <div>
-          <label class="block text-[11px] font-bold text-slate-600 mb-1.5">3. 鉴权令牌 (API Key)</label>
-          <div class="relative">
-            <input type="password" id="apiKey" placeholder="sk-..." class="w-full p-2.5 pr-8 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 font-mono bg-slate-50">
-            <button type="button" onclick="toggleVisibility('apiKey')" class="absolute right-3 top-2.5 text-slate-400 hover:text-indigo-600 transition-colors">
-              <i data-lucide="eye" class="w-4 h-4"></i>
+        <div class="flex items-center gap-3">
+            <div id="networkStatus" class="hidden items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-100">
+                <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
+                <span class="text-[9px] font-bold text-emerald-700">API 就绪</span>
+            </div>
+            <button onclick="toggleApiSettings()"
+            class="text-slate-600 hover:text-indigo-600 flex items-center gap-1.5 text-xs font-bold bg-slate-100 hover:bg-indigo-50 px-3.5 py-2 rounded-lg transition-all">
+                <i data-lucide="settings-2" class="w-4 h-4"></i><span>配置网关</span>
             </button>
-          </div>
         </div>
-      </div>
-    </div>
-  </div>
+    </header>
 
-  <main class="flex-1 max-w-[1600px] w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0 relative">
-    
-    <div class="lg:col-span-4 flex flex-col gap-5 overflow-y-auto max-h-[calc(100vh-100px)] pr-1">
-      
-      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm hover:shadow-md transition-shadow">
-        <div class="flex items-center gap-2 mb-2">
-          <i data-lucide="sparkles" class="text-indigo-500 w-5 h-5"></i>
-          <h2 class="text-xs font-bold text-slate-800 uppercase tracking-widest">目标导向型自适应排程</h2>
-        </div>
-        <p class="text-[11px] text-slate-500 mb-4 leading-relaxed">基于当前日历数据拓扑图，通过自然语言指令，呼叫大模型智能寻找黄金空余时间切片并生成规划。</p>
-        
-        <form onsubmit="runAiPlanner(event)" class="flex flex-col gap-4">
-          <div>
-            <label class="block text-[10px] font-bold text-slate-600 mb-1.5">学术与科研目标声明</label>
-            <textarea id="goalText" placeholder="例如：编写并验证 DMRG 算法的测试代码，本周共需约 4 小时，尽量安排在下午且避开组会和休息时间。" class="w-full p-3 text-xs border border-slate-200 rounded-xl focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 min-h-[70px] resize-none transition-all" required></textarea>
-          </div>
-          <div>
-            <div class="flex items-center justify-between text-[10px] font-bold text-slate-600 mb-2">
-              <span>单周期望规划总时长</span>
-              <span id="hoursLabel" class="text-indigo-600 font-extrabold bg-indigo-50 px-2 py-0.5 rounded">4 小时</span>
+    <!-- API 配置面板 -->
+    <div id="apiPanel" class="hidden bg-white border-b border-slate-200 p-6 shadow-lg absolute w-full z-30 animate-slide-down">
+        <div class="max-w-5xl mx-auto">
+            <div class="flex items-center justify-between mb-5">
+                <div class="flex items-center gap-2">
+                    <i data-lucide="plug" class="w-4 h-4 text-indigo-500"></i>
+                    <h3 class="text-sm font-bold text-slate-800">模型网关接入点配置</h3>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button onclick="saveApiKeys()"
+                    class="flex items-center gap-1.5 bg-emerald-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-600 shadow-sm transition-all active:scale-95">
+                        <i data-lucide="save" class="w-3.5 h-3.5"></i><span>保存</span>
+                    </button>
+                    <button onclick="testApiKey()" id="testKeyBtn"
+                    class="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-700 shadow-sm transition-all active:scale-95">
+                        <i data-lucide="activity" class="w-3.5 h-3.5"></i><span>Ping 测试</span>
+                    </button>
+                </div>
             </div>
-            <input type="range" id="hoursInput" min="1" max="10" value="4" oninput="document.getElementById('hoursLabel').innerText = this.value + ' 小时'" class="w-full accent-indigo-600">
-          </div>
-          <button type="submit" id="planBtn" class="w-full py-3 bg-slate-900 hover:bg-slate-800 rounded-xl text-white font-bold text-xs shadow-md shadow-slate-900/20 transition-all flex items-center justify-center gap-2 active:scale-95 group">
-            <i data-lucide="bot" class="w-4 h-4 group-hover:animate-bounce"></i>
-            <span id="planBtnText">启动 AI 规划演算引擎</span>
-          </button>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1.5">1. Base URL (端点)</label>
+                    <input list="url-presets" type="text" id="apiBaseUrl"
+                    class="w-full p-2.5 text-xs border border-slate-200 rounded-lg bg-slate-50 font-mono focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                    placeholder="https://api.deepseek.com/chat/completions">
+                    <datalist id="url-presets">
+                        <option value="https://ark.cn-beijing.volces.com/api/v3/chat/completions" label="火山引擎(豆包) 官方">
+                        </option>
+                        <option value="https://api.deepseek.com/chat/completions" label="DeepSeek 官方"></option>
+                        <option value="https://api.openai.com/v1/chat/completions" label="OpenAI 官方"></option>
+                    </datalist>
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1.5">2. Model ID</label>
+                    <input type="text" id="modelName"
+                    class="w-full p-2.5 text-xs border border-slate-200 rounded-lg bg-slate-50 font-mono focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                    placeholder="deepseek-chat">
+                </div>
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-600 mb-1.5">3. API Key</label>
+                    <input type="password" id="apiKey"
+                    class="w-full p-2.5 text-xs border border-slate-200 rounded-lg bg-slate-50 font-mono focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+                    placeholder="sk-...">
+                </div>
+            </div>
+            <p class="text-[10px] text-slate-400 mt-3">提示：支持兼容 OpenAI 格式的任意 API 端点。密钥仅存储在浏览器本地。</p>
+        </div>
+    </div>
+
+    <!-- 主体 -->
+    <main class="flex-1 max-w-[1600px] w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0 relative">
+
+        <!-- 左侧面板 -->
+        <div class="lg:col-span-4 flex flex-col gap-5 overflow-y-auto max-h-[calc(100vh-100px)] pr-1">
+
+            <!-- AI 排程卡片 -->
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                <div class="flex items-center gap-2 mb-2">
+                    <i data-lucide="sparkles" class="text-indigo-500 w-5 h-5"></i>
+                    <h2 class="text-xs font-bold text-slate-800 uppercase tracking-widest">CoT 强约束智能排程</h2>
+                </div>
+                <p class="text-[11px] text-slate-500 mb-4 leading-relaxed">
+                    AI 将执行严格的推演算法，分析您的现有日程以寻找<strong>无碰撞</strong>的空余时间段。请在下方<strong>自然描述</strong>任务需求（含时长、优先级、时间偏好等）。
+                </p>
+
+                <form onsubmit="runAiPlanner(event)" class="flex flex-col gap-4">
+                    <div>
+                        <textarea id="goalText"
+                        placeholder="例如：安排3小时的深度学习代码调试，优先下午课程结束后，避开周三组会。或：每天安排1小时论文阅读，放在早上。"
+                        class="w-full p-3 text-xs border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 min-h-[80px] resize-none transition-all"
+                    required></textarea>
+                </div>
+                <div class="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-3 text-[10px] text-indigo-700 flex items-start gap-2">
+                    <i data-lucide="info" class="w-3.5 h-3.5 flex-shrink-0 mt-0.5"></i>
+                    <span>AI 会自动解析您描述的<strong>时长、优先级与偏好</strong>，结合现有课表寻找最佳空档。无需手动设置时长参数。</span>
+                </div>
+                <button type="submit" id="planBtn"
+                class="w-full py-3 bg-slate-900 hover:bg-slate-800 rounded-xl text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed">
+                <i data-lucide="bot" class="w-4 h-4"></i>
+                <span id="planBtnText">启动 AI 规划引擎</span>
+            </button>
         </form>
-      </div>
+    </div>
 
-      <div id="thinkingBox" class="hidden bg-gradient-to-br from-indigo-50 to-blue-50 border border-indigo-100 p-5 rounded-2xl flex flex-col gap-3 shadow-inner">
+    <!-- AI 思考链输出 -->
+    <div id="thinkingBox" class="hidden bg-indigo-50/80 border border-indigo-100 p-5 rounded-2xl flex flex-col gap-3 shadow-inner animate-slide-down">
         <div class="flex items-center justify-between border-b border-indigo-200/60 pb-2">
-          <div class="flex items-center gap-2">
-            <div class="bg-indigo-100 p-1 rounded-full"><i data-lucide="message-square-dashed" class="w-3.5 h-3.5 text-indigo-700"></i></div>
-            <span class="text-[11px] text-indigo-800 font-bold uppercase tracking-wider">AI 助理分析报告</span>
-          </div>
-          <button onclick="document.getElementById('thinkingBox').classList.add('hidden')" class="text-indigo-400 hover:text-indigo-700 p-1 bg-white/50 rounded-md transition-colors"><i data-lucide="x" class="w-3 h-3"></i></button>
-        </div>
-        <div id="thinkingContent" class="text-[12px] leading-relaxed text-slate-700 font-medium tracking-wide"></div>
-      </div>
-
-      <div id="errorAlert" class="hidden bg-rose-50 border border-rose-200 p-4 rounded-2xl flex gap-3 text-rose-800 shadow-sm">
-        <i data-lucide="shield-alert" class="w-4 h-4 flex-shrink-0 mt-0.5"></i>
-        <div class="text-[11px] leading-relaxed">
-          <span class="font-bold block mb-0.5">运行时拦截异常</span>
-          <span id="errorMsg" class="opacity-90"></span>
-        </div>
-      </div>
-
-      <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex-1 min-h-[220px] overflow-y-auto flex flex-col">
-        <div class="flex items-center justify-between text-slate-800 font-bold text-xs mb-4">
-          <div class="flex items-center gap-1.5">
-            <i data-lucide="database" class="w-4 h-4 text-slate-500"></i>
-            <span>日历数据节点 (<span id="courseCount">0</span>)</span>
-          </div>
-          <div class="flex items-center gap-2">
-            <button onclick="openAddCourseForm()" class="text-indigo-600 hover:text-white text-[10px] font-bold px-2 py-1 rounded border border-indigo-200 hover:bg-indigo-600 transition-colors">手工新增</button>
-            <input type="file" id="importCoursesFile" accept=".json" class="hidden" onchange="handleImportCoursesFile(event)">
-            <button onclick="exportCoursesJson()" class="text-slate-500 hover:text-slate-800 text-[10px] font-bold px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded transition-colors" title="导出备份">导出</button>
-            <button onclick="importCoursesJson()" class="text-slate-500 hover:text-slate-800 text-[10px] font-bold px-2 py-1 bg-slate-100 hover:bg-slate-200 rounded transition-colors" title="导入备份">导入</button>
-            <button onclick="clearAllEvents()" class="text-rose-500 hover:text-white text-[10px] font-bold px-2 py-1 border border-rose-200 hover:bg-rose-500 rounded transition-colors" title="清空全部">清空</button>
-          </div>
-        </div>
-        <div id="coursesList" class="flex flex-col gap-2.5"></div>
-      </div>
+            <div class="flex items-center gap-2">
+                <i data-lucide="cpu" class="w-4 h-4 text-indigo-700"></i>
+                <span class="text-[11px] text-indigo-800 font-bold uppercase tracking-wider">AI 运算流与分析报告</span>
+            </div>
+            <button onclick="document.getElementById('thinkingBox').classList.add('hidden')"
+            class="text-indigo-400 hover:text-indigo-700 transition-colors">
+            <i data-lucide="x" class="w-3 h-3"></i>
+        </button>
     </div>
+    <div id="thinkingContent" class="text-[11px] leading-relaxed text-slate-700 font-medium whitespace-pre-wrap"></div>
+</div>
 
-    <div class="lg:col-span-8 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[700px] lg:h-[800px]">
-      <div id="calendar" class="w-full h-full"></div>
-    </div>
+<!-- 错误提示 -->
+<div id="errorAlert" class="hidden bg-rose-50 border border-rose-200 p-4 rounded-2xl flex gap-3 text-rose-800 shadow-sm animate-slide-down">
+    <i data-lucide="shield-alert" class="w-4 h-4 flex-shrink-0 mt-0.5"></i>
+    <div class="text-[11px] leading-relaxed"><span class="font-bold">运行时异常：</span><span id="errorMsg"></span></div>
+</div>
 
-    <div id="addCoursePanel" class="hidden fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center backdrop-blur-sm transition-opacity">
-      <div class="bg-white p-6 rounded-2xl w-[340px] shadow-2xl border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
-        <h3 class="text-sm font-bold mb-4 text-slate-800 flex items-center gap-2"><i data-lucide="edit-3" class="w-4 h-4 text-indigo-500"></i>编辑数据节点</h3>
+<!-- 课程列表 -->
+<div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex-1 min-h-[200px] overflow-y-auto flex flex-col">
+    <div class="flex items-center justify-between text-slate-800 font-bold text-xs mb-4">
+        <div class="flex items-center gap-1.5">
+            <i data-lucide="list-checks" class="w-4 h-4 text-slate-500"></i>
+            <span>课程清单</span>
+            <span id="courseCount" class="text-[10px] text-slate-400 font-normal ml-1">(0)</span>
+        </div>
+        <div class="flex items-center gap-2">
+            <button onclick="openAddCourseForm()"
+            class="text-indigo-600 hover:text-white text-[10px] font-bold px-2.5 py-1.5 border border-indigo-200 hover:bg-indigo-600 rounded-lg transition-all flex items-center gap-1">
+            <i data-lucide="plus" class="w-3 h-3"></i>新增
+        </button>
+        <button onclick="clearAllEvents()"
+        class="text-rose-500 hover:text-white text-[10px] font-bold px-2.5 py-1.5 border border-rose-200 hover:bg-rose-500 rounded-lg transition-all flex items-center gap-1">
+        <i data-lucide="trash-2" class="w-3 h-3"></i>清空
+    </button>
+</div>
+</div>
+<div id="coursesList" class="flex flex-col gap-2.5"></div>
+<div class="text-[10px] text-slate-400 mt-3 pt-2 border-t border-slate-100 text-center">
+    <i data-lucide="mouse-pointer-click" class="w-3 h-3 inline mr-1"></i> 日历上拖拽框选即可快速建课 · 点击事件可编辑或删除
+</div>
+</div>
+</div>
+
+<!-- 右侧日历 -->
+<div class="lg:col-span-8 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[700px] lg:h-[800px]">
+    <!-- 周选择器区域 -->
+    <div class="flex items-center justify-between gap-4 mb-4 flex-wrap">
+        <div class="flex items-center gap-3">
+            <div class="flex items-center gap-1.5">
+                <i data-lucide="calendar-range" class="w-4 h-4 text-indigo-500"></i>
+                <span class="text-[11px] font-bold text-slate-700">教学周选择</span>
+            </div>
+            <select id="weekSelector" onchange="goToWeek(this.value)"
+            class="text-xs rounded-xl border border-slate-200 bg-slate-50 p-2.5 pr-8 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 min-w-[180px] cursor-pointer transition-all appearance-none"
+        style="background-image: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23475569%22 stroke-width=%222%22%3E%3Cpath d=%22M6 9l6 6 6-6%22/%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 10px center;">
+        <option value="">请选择周</option>
+    </select>
+</div>
+<div class="flex items-center gap-2">
+    <button onclick="jumpToTodayWeek()"
+    class="text-[10px] font-bold px-3 py-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-all flex items-center gap-1 border border-indigo-100">
+    <i data-lucide="calendar" class="w-3 h-3"></i> 回到本周
+</button>
+<span id="currentWeekLabel" class="text-[10px] text-slate-400 hidden"></span>
+</div>
+</div>
+<div id="calendar" class="w-full h-full"></div>
+</div>
+
+<!-- 编辑/新建弹窗 -->
+<div id="addCoursePanel" class="hidden fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center backdrop-blur-sm transition-opacity">
+    <div class="bg-white p-6 rounded-2xl w-[360px] shadow-2xl border border-slate-200 animate-slide-down">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <i data-lucide="edit-3" class="w-4 h-4 text-indigo-500"></i>
+                <span id="modalTitle">新建数据节点</span>
+            </h3>
+            <button onclick="closeAddCourseForm()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+
         <div class="flex flex-col gap-3.5 text-xs">
-          <div>
-            <label class="block text-[10px] font-bold text-slate-500 mb-1">事件名称</label>
-            <input id="newTitle" placeholder="如：高等量子力学" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-indigo-500 focus:outline-none">
-          </div>
-          <div class="flex gap-3">
-            <div class="w-1/2">
-              <label class="block text-[10px] font-bold text-slate-500 mb-1">星期跨度</label>
-              <select id="newDay" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-indigo-500 focus:outline-none">
-                <option value="1">周一</option><option value="2">周二</option><option value="3">周三</option>
-                <option value="4">周四</option><option value="5">周五</option><option value="6">周六</option><option value="7">周日</option>
-              </select>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">事件名称</label>
+                <input id="newTitle" placeholder="输入课程或计划名称"
+                class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all">
+            </div>
+            <div class="flex gap-3">
+                <div class="w-1/2">
+                    <label class="block text-[10px] font-bold text-slate-500 mb-1">星期跨度</label>
+                    <select id="newDay"
+                    class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all">
+                    <option value="1">周一</option><option value="2">周二</option><option value="3">周三</option>
+                    <option value="4">周四</option><option value="5">周五</option><option value="6">周六</option>
+                    <option value="7">周日</option>
+                </select>
             </div>
             <div class="w-1/2">
-              <label class="block text-[10px] font-bold text-slate-500 mb-1">空间地点</label>
-              <input id="newLocation" placeholder="教室或实验室" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-indigo-500 focus:outline-none">
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">空间地点</label>
+                <input id="newLocation" placeholder="教室/位置"
+                class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all">
             </div>
-          </div>
-          <div class="flex gap-3">
+        </div>
+        <div class="flex gap-3">
             <div class="w-1/2">
-              <label class="block text-[10px] font-bold text-slate-500 mb-1">开始时间</label>
-              <input id="newStart" type="time" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-indigo-500 focus:outline-none">
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">开始时间</label>
+                <input id="newStart" type="time"
+                class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all">
             </div>
             <div class="w-1/2">
-              <label class="block text-[10px] font-bold text-slate-500 mb-1">结束时间</label>
-              <input id="newEnd" type="time" class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-indigo-500 focus:outline-none">
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">结束时间</label>
+                <input id="newEnd" type="time"
+                class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all">
             </div>
-          </div>
-          <div>
+        </div>
+        <div>
             <label class="block text-[10px] font-bold text-slate-500 mb-1">图例色彩标记</label>
             <div class="flex items-center gap-3">
-              <input id="newColor" type="color" value="#4f46e5" class="w-10 h-10 p-1 border border-slate-200 rounded-lg cursor-pointer bg-slate-50">
-              <span class="text-[10px] text-slate-400">点击左侧色块选取</span>
+                <input id="newColor" type="color" value="#4f46e5"
+                class="w-10 h-10 p-1 border border-slate-200 rounded-lg cursor-pointer bg-slate-50">
+                <span class="text-[10px] text-slate-400">点击色块选取</span>
             </div>
-          </div>
-          <div class="flex items-center justify-end gap-2 mt-4 pt-4 border-t border-slate-100">
-            <button onclick="closeAddCourseForm()" class="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">取消丢弃</button>
-            <button onclick="saveNewCourse()" class="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 shadow-md transition-transform active:scale-95">提交写入</button>
-          </div>
         </div>
-      </div>
-    </div>
-  </main>
 
-  <script>
-    // 默认内置的占位学术日程，契合科研场景
+        <div class="flex items-center justify-between mt-5 pt-4 border-t border-slate-100">
+            <button id="deleteBtnModal" onclick="deleteFromModal()"
+            class="hidden flex items-center gap-1 text-rose-500 hover:text-rose-700 px-3 py-2 text-xs font-bold rounded-lg transition-colors hover:bg-rose-50">
+            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>删除此事件
+        </button>
+        <div class="flex gap-2 ml-auto">
+            <button onclick="closeAddCourseForm()"
+            class="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all">取消</button>
+            <button onclick="saveNewCourse()"
+            class="px-5 py-2 text-xs font-bold rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 active:scale-95 transition-all shadow-sm">提交保存</button>
+        </div>
+    </div>
+</div>
+</div>
+</div>
+</main>
+
+<script>
+    // ==================== 全局状态 ====================
     let courses = [
-      { id: 'c1', title: '现代数学物理方程', dayOfWeek: 1, startTime: '08:00', endTime: '09:30', color: '#3b82f6', location: '教1-102', isAiGenerated: false },
-      { id: 'c2', title: '量子光学组会', dayOfWeek: 2, startTime: '10:00', endTime: '12:00', color: '#8b5cf6', location: '实验室', isAiGenerated: false }
+        { id: 'c1', title: '现代物理概论', dayOfWeek: 1, startTime: '08:00', endTime: '09:30', color: '#3b82f6',
+            location: '教1-102', isAiGenerated: false },
+        { id: 'c2', title: '组会', dayOfWeek: 2, startTime: '10:00', endTime: '12:00', color: '#8b5cf6',
+            location: '会议室', isAiGenerated: false }
     ];
     let calendarInstance = null;
-    let typeWriterInterval = null;
+    let currentMonday = null; // 当前日历显示周的周一日期（核心状态）
+    const SEMESTER_START = new Date(2026, 1, 23); // 学期起始：2026年2月23日（周一）第1周
 
-    // --- 初始化与页面挂载 ---
+    // ==================== 初始化 ====================
     document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('apiBaseUrl').value = localStorage.getItem('apiBaseUrl') || '';
-      document.getElementById('modelName').value = localStorage.getItem('modelName') || '';
-      document.getElementById('apiKey').value = localStorage.getItem('apiKey') || '';
-      
-      checkNetworkStatusDisplay();
-      loadCoursesFromStorage();
-      lucide.createIcons();
-      initFullCalendar();
-      renderCoursesList();
+        // 加载 API 配置
+        document.getElementById('apiBaseUrl').value = localStorage.getItem('apiBaseUrl') || '';
+        document.getElementById('modelName').value = localStorage.getItem('modelName') || '';
+        document.getElementById('apiKey').value = localStorage.getItem('apiKey') || '';
+
+        // 加载课程数据
+        loadCoursesFromStorage();
+        // 初始化当前周一
+        initCurrentMonday();
+        // 填充周选择器
+        populateWeekSelector();
+        // 初始化图标
+        lucide.createIcons();
+        // 初始化日历
+        initFullCalendar();
+        // 渲染课程列表
+        renderCoursesList();
+        // 检查网络状态
+        checkNetworkStatusDisplay();
+        // 更新当前周标签
+        updateCurrentWeekLabel();
     });
 
-    // --- API 配置层逻辑 ---
+    /** 初始化 currentMonday 为当前日期所在周的周一 */
+    function initCurrentMonday() {
+        const today = new Date();
+        const dayOfWeek = today.getDay(); // 0=周日
+        const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        currentMonday = new Date(today);
+        currentMonday.setDate(today.getDate() + diff);
+        currentMonday.setHours(0, 0, 0, 0);
+    }
+
+    // ==================== API 配置 ====================
     function getApiConfig() {
-      return {
-        baseUrl: document.getElementById('apiBaseUrl').value.trim(),
-        model: document.getElementById('modelName').value.trim(),
-        key: document.getElementById('apiKey').value.trim()
-      };
+        return {
+            baseUrl: document.getElementById('apiBaseUrl').value.trim(),
+            model: document.getElementById('modelName').value.trim(),
+            key: document.getElementById('apiKey').value.trim()
+        };
     }
 
-    function toggleApiSettings() { 
-      const panel = document.getElementById('apiPanel');
-      panel.classList.toggle('hidden'); 
-    }
-    
-    function toggleVisibility(id) { 
-      const el = document.getElementById(id); 
-      el.type = el.type === 'password' ? 'text' : 'password'; 
-    }
-
-    function saveApiKeys() {
-      localStorage.setItem('apiBaseUrl', document.getElementById('apiBaseUrl').value.trim());
-      localStorage.setItem('modelName', document.getElementById('modelName').value.trim());
-      localStorage.setItem('apiKey', document.getElementById('apiKey').value.trim());
-      checkNetworkStatusDisplay();
-      showToast("网关配置已加密写入本地沙箱！");
+    function toggleApiSettings() {
+        const panel = document.getElementById('apiPanel');
+        panel.classList.toggle('hidden');
+        if (!panel.classList.contains('hidden')) {
+            panel.classList.add('animate-slide-down');
+        }
     }
 
     function checkNetworkStatusDisplay() {
-      const key = localStorage.getItem('apiKey');
-      const light = document.getElementById('networkStatus');
-      if(key) light.classList.remove('hidden');
-      else light.classList.add('hidden');
+        const statusEl = document.getElementById('networkStatus');
+        if (localStorage.getItem('apiKey')) {
+            statusEl.classList.remove('hidden');
+        } else {
+            statusEl.classList.add('hidden');
+        }
+    }
+
+    function saveApiKeys() {
+        localStorage.setItem('apiBaseUrl', document.getElementById('apiBaseUrl').value.trim());
+        localStorage.setItem('modelName', document.getElementById('modelName').value.trim());
+        localStorage.setItem('apiKey', document.getElementById('apiKey').value.trim());
+        checkNetworkStatusDisplay();
+        showToast('网关配置已保存！', 'success');
+        toggleApiSettings();
     }
 
     async function testApiKey() {
-      const config = getApiConfig();
-      if (!config.baseUrl || !config.key || !config.model) {
-        showErrorAlert(true, "请完整填写接口地址、模型名称和密钥。"); return;
-      }
-      const btn = document.getElementById('testKeyBtn');
-      const original = btn.innerHTML;
-      btn.disabled = true; btn.innerHTML = '<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i><span>握手中...</span>';
-      lucide.createIcons();
-
-      try {
-        await axios.post(config.baseUrl, {
-          model: config.model,
-          messages: [{ role: 'user', content: 'Reply "pong" strictly' }],
-          max_tokens: 5
-        }, { headers: { "Content-Type": "application/json", "Authorization": `Bearer ${config.key}` } });
-        
-        showToast("网关连通测试成功！API 通道畅通。");
-        showErrorAlert(false);
-      } catch (err) {
-        const errMsg = err.response ? `云端拒绝 (${err.response.status})` : '跨域拦截(CORS) 或 网络故障。如遇 CORS，请选择跨域代理预设。';
-        showErrorAlert(true, `握手失败: ${errMsg}`);
-      } finally {
-        btn.disabled = false; btn.innerHTML = original; lucide.createIcons();
-      }
-    }
-
-    // --- 核心数据存取与导出模块 ---
-    function persistCourses() { localStorage.setItem('courses', JSON.stringify(courses || [])); }
-    function loadCoursesFromStorage() {
-      try { const raw = localStorage.getItem('courses'); if (raw) { const parsed = JSON.parse(raw); if (Array.isArray(parsed)) courses = parsed; } } catch(e){}
-    }
-    
-    function exportCoursesJson() {
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(new Blob([JSON.stringify(courses, null, 2)], { type: 'application/json' }));
-      a.download = `academic_schedule_${new Date().getTime()}.json`;
-      a.click(); URL.revokeObjectURL(a.href);
-      showToast('日历拓扑 JSON 文件已离线导出');
-    }
-    
-    function importCoursesJson() { document.getElementById('importCoursesFile').click(); }
-    function handleImportCoursesFile(e) {
-      const file = e.target.files[0]; if (!file) return;
-      const reader = new FileReader();
-      reader.onload = () => { 
-        try { 
-          courses = JSON.parse(reader.result); renderCoursesList(); persistCourses(); showToast('外部数据流同步成功'); 
-        } catch(err) { showErrorAlert(true, '文件解析失败，请确保格式为严格 JSON'); } 
-      };
-      reader.readAsText(file);
-    }
-
-    // --- 日程 CRUD UI 操作 ---
-    function openAddCourseForm(id) {
-      const panel = document.getElementById('addCoursePanel'); 
-      panel.classList.remove('hidden');
-      if (id) {
-        const c = courses.find(x => x.id === id);
-        if(c) { 
-          document.getElementById('newTitle').value = c.title; 
-          document.getElementById('newDay').value = c.dayOfWeek; 
-          document.getElementById('newStart').value = c.startTime; 
-          document.getElementById('newEnd').value = c.endTime; 
-          document.getElementById('newLocation').value = c.location || ''; 
-          document.getElementById('newColor').value = c.color; 
-          panel.dataset.editId = id; 
+        const config = getApiConfig();
+        if (!config.baseUrl || !config.key) {
+            showErrorAlert(true, '请填写完整的 Base URL 和 API Key');
+            return;
         }
-      } else { 
-        document.getElementById('newTitle').value = ''; 
-        document.getElementById('newStart').value = '08:00'; 
-        document.getElementById('newEnd').value = '09:30'; 
-        delete panel.dataset.editId; 
-      }
-    }
-    
-    function closeAddCourseForm() { document.getElementById('addCoursePanel').classList.add('hidden'); }
-    
-    function saveNewCourse() {
-      const id = document.getElementById('addCoursePanel').dataset.editId;
-      const start = document.getElementById('newStart').value;
-      const end = document.getElementById('newEnd').value;
-      if(start >= end) { showToast('逻辑错误：结束时间必须晚于开始时间', 'error'); return; }
+        const btn = document.getElementById('testKeyBtn');
+        const originalHTML = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i><span>Ping...</span>';
+        lucide.createIcons();
 
-      const data = { 
-        title: document.getElementById('newTitle').value.trim(), 
-        dayOfWeek: parseInt(document.getElementById('newDay').value), 
-        startTime: start, 
-        endTime: end, 
-        location: document.getElementById('newLocation').value.trim(), 
-        color: document.getElementById('newColor').value, 
-        isAiGenerated: false 
-      };
-      
-      if (!data.title) { showToast('必须填写事件名称', 'error'); return; }
-      
-      if (id) { courses = courses.map(c => c.id === id ? { ...c, ...data, id } : c); } 
-      else { courses.push({ ...data, id: 'node_' + Date.now() }); }
-      
-      closeAddCourseForm(); renderCoursesList(); persistCourses(); showToast('数据节点已更新并挂载');
-    }
-    
-    function deleteCourse(id) { courses = courses.filter(c => c.id !== id); renderCoursesList(); persistCourses(); }
-    function clearAllEvents() { if (confirm("危险操作：确定要截断并清空整个日历画布吗？")) { courses = []; renderCoursesList(); persistCourses(); } }
-
-    // --- FullCalendar 渲染层 ---
-    function initFullCalendar() {
-      calendarInstance = new FullCalendar.Calendar(document.getElementById('calendar'), {
-        initialView: 'timeGridWeek', 
-        headerToolbar: { left: 'prev,next today', center: 'title', right: 'timeGridWeek,timeGridDay' },
-        firstDay: 1, 
-        slotMinTime: '07:00:00', 
-        slotMaxTime: '23:30:00', 
-        allDaySlot: false, 
-        editable: true,
-        eventDrop: (i) => handleSync(i.event), 
-        eventResize: (i) => handleSync(i.event), 
-        events: getMappedEvents(),
-        eventContent: (arg) => ({ 
-          html: `
-            <div class="p-1.5 h-full flex flex-col justify-between cursor-move text-white text-[11px] leading-snug">
-              <div class="font-bold tracking-wide">${arg.event.extendedProps.isAiGenerated?'✨ ':''}${arg.event.title}</div>
-              <div class="opacity-90 font-mono text-[9px] mt-1 flex items-center justify-between">
-                <span>${arg.event.extendedProps.location?`📍${arg.event.extendedProps.location}`:''}</span>
-                <span>${arg.timeText}</span>
-              </div>
-            </div>` 
-        })
-      });
-      calendarInstance.render();
-    }
-
-    function getMappedEvents() {
-      const today = new Date(); 
-      const monday = new Date(today); 
-      monday.setDate(today.getDate() + (today.getDay() === 0 ? -6 : 1 - today.getDay())); 
-      monday.setHours(0,0,0,0);
-      
-      return courses.map(c => {
-        const d = new Date(monday); d.setDate(monday.getDate() + c.dayOfWeek - 1);
-        const s = new Date(d); s.setHours(...c.startTime.split(':'));
-        const e = new Date(d); e.setHours(...c.endTime.split(':'));
-        return { 
-          id: c.id, title: c.title, start: s.toISOString(), end: e.toISOString(), 
-          backgroundColor: c.color, borderColor: c.color, 
-          extendedProps: { isAiGenerated: c.isAiGenerated, location: c.location } 
-        };
-      });
-    }
-
-    function handleSync(fcEvent) {
-      const d = fcEvent.start.getDay() || 7; const pad = v => String(v).padStart(2,'0');
-      const start = `${pad(fcEvent.start.getHours())}:${pad(fcEvent.start.getMinutes())}`; 
-      const end = `${pad(fcEvent.end.getHours())}:${pad(fcEvent.end.getMinutes())}`;
-      courses = courses.map(c => c.id === fcEvent.id ? {...c, dayOfWeek: d, startTime: start, endTime: end} : c);
-      renderCoursesList(); persistCourses();
-    }
-
-    function renderCoursesList() {
-      const ctn = document.getElementById('coursesList'); ctn.innerHTML = ''; 
-      document.getElementById('courseCount').innerText = courses.length;
-      
-      if (!courses.length) { 
-        ctn.innerHTML = `
-          <div class="h-full flex flex-col items-center justify-center py-10 opacity-60">
-            <i data-lucide="inbox" class="w-8 h-8 text-slate-400 mb-2"></i>
-            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">无挂载数据</p>
-          </div>`; 
-        lucide.createIcons(); return; 
-      }
-
-      courses.forEach(c => {
-        const d = document.createElement('div'); 
-        d.className = 'p-3 border rounded-xl group bg-slate-50 hover:bg-white hover:border-indigo-200 hover:shadow-sm flex justify-between items-center transition-all';
-        d.innerHTML = `
-          <div class="flex items-center gap-3 min-w-0">
-            <div class="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm" style="background-color:${c.color}"></div>
-            <div class="truncate leading-tight">
-              <p class="text-xs font-bold text-slate-800 truncate">${c.title}</p>
-              <p class="text-[10px] text-slate-500 font-mono mt-1 flex items-center gap-2">
-                <span class="bg-slate-200 px-1.5 py-0.5 rounded text-[9px]">周${['一','二','三','四','五','六','日'][c.dayOfWeek-1]}</span>
-                <span>${c.startTime} - ${c.endTime}</span>
-              </p>
-            </div>
-          </div>
-          <div class="flex gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity">
-            <button onclick="openAddCourseForm('${c.id}')" class="text-slate-400 hover:text-indigo-600 p-1.5 bg-slate-100 hover:bg-indigo-50 rounded-md transition-colors"><i data-lucide="edit-2" class="w-3.5 h-3.5"></i></button>
-            <button onclick="deleteCourse('${c.id}')" class="text-slate-400 hover:text-rose-500 p-1.5 bg-slate-100 hover:bg-rose-50 rounded-md transition-colors"><i data-lucide="trash" class="w-3.5 h-3.5"></i></button>
-          </div>`;
-        ctn.appendChild(d);
-      });
-      lucide.createIcons(); 
-      if (calendarInstance) { calendarInstance.removeAllEvents(); calendarInstance.addEventSource(getMappedEvents()); }
-    }
-
-    // --- UX 打字机动效 ---
-    function typeWriter(element, text, speed = 25) {
-      if(typeWriterInterval) clearInterval(typeWriterInterval);
-      element.innerHTML = '';
-      let i = 0;
-      typeWriterInterval = setInterval(() => {
-        if (i < text.length) {
-          element.innerHTML += text.charAt(i);
-          i++;
-        } else {
-          clearInterval(typeWriterInterval);
+        try {
+            const response = await axios.post(config.baseUrl, {
+                model: config.model || undefined,
+                messages: [{ role: 'user', content: 'ping' }],
+                max_tokens: 5
+            }, {
+                headers: {
+                    "Authorization": `Bearer ${config.key}`,
+                    "Content-Type": "application/json"
+                },
+                timeout: 15000
+            });
+            showToast('连通测试成功！端点响应正常。', 'success');
+            showErrorAlert(false);
+        } catch (err) {
+            let errMsg = '测试失败：';
+            if (err.response) {
+                errMsg += `HTTP ${err.response.status} - ${JSON.stringify(err.response.data).slice(0, 120)}`;
+            } else if (err.code === 'ECONNABORTED') {
+                errMsg += '请求超时，请检查网络或端点地址';
+            } else {
+                errMsg += err.message.slice(0, 150);
+            }
+            showErrorAlert(true, errMsg);
+        } finally {
+            btn.disabled = false;
+            btn.innerHTML = originalHTML;
+            lucide.createIcons();
         }
-      }, speed);
     }
 
-    // --- 核心 AI 排程算法引擎 ---
-    async function runAiPlanner(event) {
-      event.preventDefault();
-      const goal = document.getElementById('goalText').value.trim(); 
-      const hours = document.getElementById('hoursInput').value;
-      const config = getApiConfig(); 
-      
-      const btn = document.getElementById('planBtn'); 
-      const btnText = document.getElementById('planBtnText');
-      
-      // UX 动态加载提示
-      const loadingPhrases = ["解析时间拓扑...", "搜寻可用区块...", "计算物理防碰撞...", "生成 JSON 载荷..."];
-      let phraseIdx = 0;
-      btn.disabled = true; 
-      btn.classList.add('opacity-80', 'cursor-not-allowed');
-      
-      const loadingInterval = setInterval(() => {
-        btnText.innerText = loadingPhrases[phraseIdx % loadingPhrases.length];
-        phraseIdx++;
-      }, 1500);
-      btnText.innerHTML = `<i data-lucide="loader-2" class="w-4 h-4 animate-spin inline-block mr-2"></i> ${loadingPhrases[0]}`;
-      lucide.createIcons();
+    // ==================== 周选择器逻辑 ====================
+    /** 填充周选择器下拉选项（仿 WeekUp 风格） */
+    function populateWeekSelector() {
+        const selector = document.getElementById('weekSelector');
+        // 保留第一个提示选项
+        selector.innerHTML = '<option value="">请选择周</option>';
 
-      if (!config.key) { 
-        // 极速 Demo Fallback
-        setTimeout(() => {
-          clearInterval(loadingInterval);
-          courses.push({ id: 'a1', title: '模拟安排: ' + goal, dayOfWeek: 4, startTime: '15:00', endTime: '17:00', color: '#f59e0b', location: '独立思考', isAiGenerated: true });
-          
-          document.getElementById('thinkingBox').classList.remove('hidden');
-          typeWriter(document.getElementById('thinkingContent'), "【Demo 降级演示】我检测到系统未配置模型 Key。为了不阻塞您的流程，已为您在周四下午规划了一段模拟排程。实战中，我会基于您指定的算法严格执行时间碎片的拼合。");
-          
-          renderCoursesList(); persistCourses(); triggerSuccessConfetti(); 
-          btn.disabled = false; btn.classList.remove('opacity-80', 'cursor-not-allowed'); btnText.innerText = "启动 AI 规划演算引擎";
-          showToast("Demo 演算完毕并落盘");
-        }, 1200);
-        return;
-      }
+        // 从学期起始日期开始，生成 24 周的选项
+        const totalWeeks = 24;
+        for (let i = 0; i < totalWeeks; i++) {
+            const weekMonday = new Date(SEMESTER_START);
+            weekMonday.setDate(SEMESTER_START.getDate() + i * 7);
+            const weekSunday = new Date(weekMonday);
+            weekSunday.setDate(weekMonday.getDate() + 6);
 
-      const prompt = `你是精通精力管理与统筹学的学术 AI 助理。请解析用户的当前日历拓扑，寻找符合要求的时间缝隙进行规划。
-      
-      【全局环境数据】
-      现存只读数据节点 (禁止覆盖): ${JSON.stringify(courses)}
-      需注入的目标任务: "${goal}"，预计总工时 ${hours} 小时。
+            const weekNum = i + 1;
+            const mondayStr = formatDateShort(weekMonday);
+            const sundayStr = formatDateShort(weekSunday);
 
-      【物理与逻辑约束】
-      1. 冲突规避：新任务的 startTime 和 endTime 绝对不能与上方提供的数据节点发生时间重叠。
-      2. 睡眠守卫：严格禁止安排在 23:00 到次日 08:00 之间。
-      3. 模块化切分：不要将 ${hours} 小时全堆在一起，请将其合理切分为单次 1.5 到 2 小时的时间块。
+            const option = document.createElement('option');
+            option.value = weekMonday.toISOString().split('T')[0]; // 如 "2026-02-23"
+            option.textContent = `第${weekNum}周 (${mondayStr} - ${sundayStr})`;
+            option.className = 'week-selector-option';
 
-      【严格输出规范 (JSON Mode)】
-      请务必直接返回符合以下结构的标准 JSON 格式，不要包含任何 markdown 代码块标记，不要包含其他说明文字。
-      {
-        "message": "以专业、极客的口吻解释你的编排算法逻辑（例如：避开了哪些高负载时段，为什么选择此时段）",
-        "plans": [
-          {"title": "精炼的任务名", "dayOfWeek": 3, "startTime": "14:00", "endTime": "16:00", "color": "#f59e0b"}
-        ]
-      }`;
+            // 高亮当前周
+            if (isSameDay(weekMonday, currentMonday)) {
+                option.selected = true;
+                option.className += ' current-week';
+            }
 
-      try {
-        const response = await axios.post(config.baseUrl, {
-          model: config.model,
-          messages: [{ role: 'system', content: prompt }],
-          temperature: 0.2 // 调低温度保证 JSON 结构稳定性
-        }, { headers: { "Content-Type": "application/json", "Authorization": `Bearer ${config.key}` } });
+            selector.appendChild(option);
+        }
 
-        const raw = response.data.choices[0].message.content;
-        
-        // 【抗毁伤提取算法】使用正则寻找最外层大括号，完美无视模型生成的幻觉 markdown 和前置寒暄
-        const jsonMatch = raw.match(/\{[\s\S]*\}/);
-        if(!jsonMatch) throw new Error("大模型未能返回合法的 JSON 结构边界");
-        
-        const parsed = JSON.parse(jsonMatch[0]);
-        
-        // 渲染 AI 打字机助理对话
-        document.getElementById('thinkingBox').classList.remove('hidden');
-        typeWriter(document.getElementById('thinkingContent'), parsed.message || "演算完毕。任务流已无冲突注入当前画布。");
-        
-        const plans = parsed.plans || [];
-        plans.forEach(p => { 
-          p.id = 'ai_' + Date.now() + Math.floor(Math.random() * 1000); 
-          p.isAiGenerated = true; 
-          if(!p.color) p.color = '#f59e0b'; 
+        // 也添加一个"本周"快捷选项
+        const thisMonday = new Date(currentMonday);
+        const foundOption = selector.querySelector(`option[value="${thisMonday.toISOString().split('T')[0]}"]`);
+        if (!foundOption) {
+            // 当前周一不在学期范围内，添加一个额外选项
+            const opt = document.createElement('option');
+            opt.value = thisMonday.toISOString().split('T')[0];
+            opt.textContent = `本周 (${formatDateShort(thisMonday)} - ${formatDateShort(new Date(thisMonday.getTime() + 6 * 86400000))})`;
+            opt.selected = true;
+            opt.className = 'week-selector-option current-week';
+            selector.appendChild(opt);
+        }
+    }
+
+    /** 跳转到指定周 */
+    function goToWeek(mondayStr) {
+        if (!mondayStr || !calendarInstance) return;
+
+        const parts = mondayStr.split('-');
+        if (parts.length !== 3) return;
+
+        currentMonday = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
+        currentMonday.setHours(0, 0, 0, 0);
+
+        // 刷新日历事件
+        refreshCalendarEvents();
+        // 导航日历视图到该周
+        calendarInstance.gotoDate(currentMonday);
+        // 更新标签
+        updateCurrentWeekLabel();
+        // 更新周选择器的选中状态
+        updateWeekSelectorSelection();
+        // 重新渲染课程列表（保持同步）
+        renderCoursesList();
+
+        showToast(`已切换至第${getWeekNumber(currentMonday)}周`, 'success');
+    }
+
+    /** 跳转到今天所在周 */
+    function jumpToTodayWeek() {
+        const today = new Date();
+        const dayOfWeek = today.getDay();
+        const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+        const thisMonday = new Date(today);
+        thisMonday.setDate(today.getDate() + diff);
+        thisMonday.setHours(0, 0, 0, 0);
+
+        currentMonday = thisMonday;
+        refreshCalendarEvents();
+        calendarInstance.gotoDate(currentMonday);
+        updateCurrentWeekLabel();
+        updateWeekSelectorSelection();
+        renderCoursesList();
+        showToast('已回到本周', 'success');
+    }
+
+    /** 获取当前周在学期中的周次 */
+    function getWeekNumber(monday) {
+        const diffDays = Math.round((monday.getTime() - SEMESTER_START.getTime()) / 86400000);
+        return Math.floor(diffDays / 7) + 1;
+    }
+
+    /** 更新周选择器的选中状态 */
+    function updateWeekSelectorSelection() {
+        const selector = document.getElementById('weekSelector');
+        const targetValue = currentMonday.toISOString().split('T')[0];
+        const options = selector.querySelectorAll('option');
+        let found = false;
+        options.forEach(opt => {
+            if (opt.value === targetValue) {
+                opt.selected = true;
+                found = true;
+            }
         });
-        
-        courses = [...courses, ...plans];
-        renderCoursesList(); persistCourses(); triggerSuccessConfetti(); showErrorAlert(false); 
-        showToast("自适应排定计算完成！");
-      } catch (err) {
-        showErrorAlert(true, `AI 推理流崩溃: ${err.message || '大模型网络阻断或发生跨域拒止 (CORS)'}`); 
-        console.error("AI Parser Error: ", err);
-      } finally { 
-        clearInterval(loadingInterval);
-        btn.disabled = false; btn.classList.remove('opacity-80', 'cursor-not-allowed');
-        btnText.innerText = "启动 AI 规划演算引擎";
-        lucide.createIcons(); 
-      }
+        if (!found && selector.querySelector(`option[value="${targetValue}"]`)) {
+            selector.querySelector(`option[value="${targetValue}"]`).selected = true;
+        }
     }
 
-    // --- 导出标准 ICS ---
-    function exportIcsCalendar() {
-      if (!courses.length) { showToast("画布内存池为空，无法执行封卷", "error"); return; }
-      const pad = n => String(n).padStart(2,'0');
-      const fmt = d => `${d.getFullYear()}${pad(d.getMonth()+1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
-      const now = fmt(new Date());
-      let ics = ['BEGIN:VCALENDAR','VERSION:2.0','PRODID:-//Geek Academic AI Planner//EN'];
-      
-      getMappedEvents().forEach(e => {
-        ics.push('BEGIN:VEVENT', `UID:${e.id}@geek-planner`, `DTSTAMP:${now}`, `DTSTART:${fmt(new Date(e.start))}`, `DTEND:${fmt(new Date(e.end))}`, `SUMMARY:${e.title}`, `DESCRIPTION:${e.extendedProps.isAiGenerated?'✨ AI驱动智能排定':'人工配置流'}`, `LOCATION:${e.extendedProps.location||''}`, 'END:VEVENT');
-      });
-      ics.push('END:VCALENDAR');
-      
-      const a = document.createElement('a'); 
-      a.href = URL.createObjectURL(new Blob([ics.join('\r\n')], {type: 'text/calendar;charset=utf-8'})); 
-      a.download = `schedule_export_${new Date().getTime()}.ics`; 
-      document.body.appendChild(a); a.click(); document.body.removeChild(a); 
-      showToast("标准 ICS 日历文件已产出");
+    /** 更新当前周标签 */
+    function updateCurrentWeekLabel() {
+        const label = document.getElementById('currentWeekLabel');
+        const weekNum = getWeekNumber(currentMonday);
+        const sunday = new Date(currentMonday);
+        sunday.setDate(currentMonday.getDate() + 6);
+        label.textContent = `当前：第${weekNum}周 | ${formatDateShort(currentMonday)} - ${formatDateShort(sunday)}`;
+        label.classList.remove('hidden');
     }
 
-    // --- 全局交互组件 ---
-    function showErrorAlert(show, txt="") { 
-      const alert = document.getElementById('errorAlert'); 
-      if(show) { alert.classList.remove('hidden'); document.getElementById('errorMsg').innerText = txt; } 
-      else alert.classList.add('hidden'); 
+    /** 格式化日期为 MM/DD */
+    function formatDateShort(date) {
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${month}/${day}`;
     }
-    
-    function showToast(msg, type='success') {
-      const t = document.createElement('div'); 
-      t.className = `fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-5 py-3 rounded-full shadow-lg shadow-slate-200/50 text-white font-bold text-xs flex items-center gap-2 transition-all -translate-y-10 opacity-0 ${type === 'success'?'bg-slate-900':'bg-rose-600'}`;
-      t.innerHTML = `<i data-lucide="${type === 'success'?'check-circle-2':'alert-circle'}" class="w-4 h-4"></i><span class="tracking-wider">${msg}</span>`;
-      document.body.appendChild(t); 
-      lucide.createIcons(); 
-      setTimeout(() => t.classList.remove('-translate-y-10','opacity-0'), 50); 
-      setTimeout(() => { t.classList.add('-translate-y-10','opacity-0'); setTimeout(()=>t.remove(), 300); }, 3000);
+
+    /** 判断两个日期是否为同一天 */
+    function isSameDay(d1, d2) {
+        return d1.getFullYear() === d2.getFullYear() &&
+            d1.getMonth() === d2.getMonth() &&
+            d1.getDate() === d2.getDate();
     }
-    
-    function triggerSuccessConfetti() { confetti({ particleCount: 150, spread: 80, origin: { y: 0.8 }, colors: ['#4f46e5', '#8b5cf6', '#f59e0b'] }); }
-  </script>
+
+    // ==================== 课程数据持久化 ====================
+    function persistCourses() {
+        localStorage.setItem('courses', JSON.stringify(courses || []));
+    }
+
+    function loadCoursesFromStorage() {
+        try {
+            const raw = localStorage.getItem('courses');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    courses = parsed;
+                }
+            }
+        } catch (e) {
+            console.warn('课程数据读取失败，使用默认数据', e);
+        }
+    }
+
+    // ==================== 日历核心 ====================
+    function initFullCalendar() {
+        const calendarEl = document.getElementById('calendar');
+        calendarInstance = new FullCalendar.Calendar(calendarEl, {
+            initialView: 'timeGridWeek',
+            headerToolbar: {
+                left: 'prev,next today',
+                center: 'title',
+                right: 'timeGridWeek,timeGridDay'
+            },
+            firstDay: 1,
+            slotMinTime: '07:00:00',
+            slotMaxTime: '23:30:00',
+            allDaySlot: false,
+            editable: true,
+            selectable: true,
+            selectMirror: true,
+            snapDuration: '00:15:00',
+            nowIndicator: true,
+            height: '100%',
+            expandRows: true,
+
+            // 框选创建
+            select: function(info) {
+                openAddCourseForm(null, info.start, info.end);
+                calendarInstance.unselect();
+            },
+            // 点击事件 → 编辑
+            eventClick: function(info) {
+                openAddCourseForm(info.event.id);
+            },
+            // 拖拽移动
+            eventDrop: function(info) {
+                handleSync(info.event);
+            },
+            // 拖拽伸缩
+            eventResize: function(info) {
+                handleSync(info.event);
+            },
+
+            events: getMappedEvents(),
+            eventContent: function(arg) {
+                const isAi = arg.event.extendedProps.isAiGenerated;
+                const loc = arg.event.extendedProps.location || '';
+                const aiBadge = isAi ? '✨ ' : '';
+                const locBadge = loc ? `<div class="opacity-75 text-[8px] mt-0.5">📍 ${loc}</div>` : '';
+                return {
+                    html: `<div class="p-1.5 h-full flex flex-col justify-between text-white text-[11px] leading-snug cursor-pointer">
+                <div class="font-bold truncate">${aiBadge}${arg.event.title}</div>
+                <div class="opacity-85 font-mono text-[9px] mt-1">${arg.timeText}</div>
+                ${locBadge}
+              </div>`
+                };
+            }
+        });
+        calendarInstance.render();
+    }
+
+    /** 将课程数据映射为 FullCalendar 事件 */
+    function getMappedEvents() {
+        if (!currentMonday) initCurrentMonday();
+        const monday = new Date(currentMonday);
+
+        return courses.map(c => {
+            const eventDate = new Date(monday);
+            eventDate.setDate(monday.getDate() + c.dayOfWeek - 1);
+
+            const startParts = c.startTime.split(':').map(Number);
+            const endParts = c.endTime.split(':').map(Number);
+
+            const start = new Date(eventDate);
+            start.setHours(startParts[0], startParts[1], 0, 0);
+            const end = new Date(eventDate);
+            end.setHours(endParts[0], endParts[1], 0, 0);
+
+            return {
+                id: c.id,
+                title: c.title,
+                start: start.toISOString(),
+                end: end.toISOString(),
+                backgroundColor: c.color,
+                borderColor: c.color,
+                textColor: '#ffffff',
+                extendedProps: {
+                    isAiGenerated: c.isAiGenerated || false,
+                    location: c.location || '',
+                    dayOfWeek: c.dayOfWeek
+                }
+            };
+        });
+    }
+
+    /** 刷新日历事件（不重新渲染整个日历） */
+    function refreshCalendarEvents() {
+        if (!calendarInstance) return;
+        calendarInstance.removeAllEvents();
+        calendarInstance.addEventSource(getMappedEvents());
+    }
+
+    /** 处理拖拽/伸缩同步 */
+    function handleSync(fcEvent) {
+        const rawDay = fcEvent.start.getDay(); // 0=周日
+        const dayOfWeek = rawDay === 0 ? 7 : rawDay;
+        const pad = v => String(v).padStart(2, '0');
+        const startTime = `${pad(fcEvent.start.getHours())}:${pad(fcEvent.start.getMinutes())}`;
+        const endTime = `${pad(fcEvent.end.getHours())}:${pad(fcEvent.end.getMinutes())}`;
+
+        courses = courses.map(c =>
+            c.id === fcEvent.id ? { ...c, dayOfWeek, startTime, endTime } : c
+        );
+        renderCoursesList();
+        persistCourses();
+        showToast('时间已自动吸附同步', 'success');
+    }
+
+    // ==================== 课程编辑面板 ====================
+    function openAddCourseForm(id = null, startDt = null, endDt = null) {
+        const panel = document.getElementById('addCoursePanel');
+        const delBtn = document.getElementById('deleteBtnModal');
+        const modalTitle = document.getElementById('modalTitle');
+        panel.classList.remove('hidden');
+        panel.classList.add('animate-slide-down');
+
+        const pad = v => String(v).padStart(2, '0');
+
+        if (id) {
+            // 编辑模式
+            const c = courses.find(x => x.id === id);
+            if (c) {
+                document.getElementById('newTitle').value = c.title;
+                document.getElementById('newDay').value = c.dayOfWeek;
+                document.getElementById('newStart').value = c.startTime;
+                document.getElementById('newEnd').value = c.endTime;
+                document.getElementById('newLocation').value = c.location || '';
+                document.getElementById('newColor').value = c.color || '#4f46e5';
+                panel.dataset.editId = id;
+                delBtn.classList.remove('hidden');
+                modalTitle.textContent = '编辑数据节点';
+            }
+        } else {
+            // 新建模式
+            document.getElementById('newTitle').value = '';
+            document.getElementById('newLocation').value = '';
+            document.getElementById('newColor').value = '#4f46e5';
+            delete panel.dataset.editId;
+            delBtn.classList.add('hidden');
+            modalTitle.textContent = '新建数据节点';
+
+            if (startDt && endDt) {
+                const rawDay = startDt.getDay();
+                const day = rawDay === 0 ? 7 : rawDay;
+                document.getElementById('newDay').value = day;
+                document.getElementById('newStart').value = `${pad(startDt.getHours())}:${pad(startDt.getMinutes())}`;
+                document.getElementById('newEnd').value = `${pad(endDt.getHours())}:${pad(endDt.getMinutes())}`;
+            } else {
+                document.getElementById('newDay').value = '1';
+                document.getElementById('newStart').value = '08:00';
+                document.getElementById('newEnd').value = '09:30';
+            }
+        }
+    }
+
+    function closeAddCourseForm() {
+        document.getElementById('addCoursePanel').classList.add('hidden');
+    }
+
+    function saveNewCourse() {
+        const panel = document.getElementById('addCoursePanel');
+        const editId = panel.dataset.editId;
+        const title = document.getElementById('newTitle').value.trim();
+        const startTime = document.getElementById('newStart').value;
+        const endTime = document.getElementById('newEnd').value;
+        const dayOfWeek = parseInt(document.getElementById('newDay').value);
+        const location = document.getElementById('newLocation').value.trim();
+        const color = document.getElementById('newColor').value;
+
+        // 验证
+        if (!title) {
+            showToast('请填写事件名称', 'error');
+            return;
+        }
+        if (startTime >= endTime) {
+            showToast('结束时间必须晚于开始时间', 'error');
+            return;
+        }
+
+        const data = {
+            title,
+            dayOfWeek,
+            startTime,
+            endTime,
+            location,
+            color,
+            isAiGenerated: false
+        };
+
+        if (editId) {
+            // 更新
+            courses = courses.map(c => c.id === editId ? { ...c, ...data, id: editId } : c);
+            showToast('日程已更新', 'success');
+        } else {
+            // 新建
+            const newId = 'node_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+            courses.push({ ...data, id: newId });
+            showToast('新日程已创建', 'success');
+        }
+
+        closeAddCourseForm();
+        renderCoursesList();
+        persistCourses();
+    }
+
+    function deleteFromModal() {
+        const panel = document.getElementById('addCoursePanel');
+        const editId = panel.dataset.editId;
+        if (editId) {
+            if (confirm('确定要删除此日程事件吗？此操作不可撤销。')) {
+                deleteCourse(editId);
+                closeAddCourseForm();
+                showToast('日程已删除', 'success');
+            }
+        }
+    }
+
+    function deleteCourse(id) {
+        courses = courses.filter(c => c.id !== id);
+        renderCoursesList();
+        persistCourses();
+    }
+
+    function clearAllEvents() {
+        if (courses.length === 0) {
+            showToast('课程列表已为空', 'error');
+            return;
+        }
+        if (confirm(`确定要清空全部 ${courses.length} 个日程事件吗？\n此操作不可撤销！`)) {
+            courses = [];
+            renderCoursesList();
+            persistCourses();
+            showToast('所有日程已清空', 'success');
+        }
+    }
+
+    // ==================== 课程列表渲染 ====================
+    function renderCoursesList() {
+        const ctn = document.getElementById('coursesList');
+        const countEl = document.getElementById('courseCount');
+        ctn.innerHTML = '';
+
+        if (!courses.length) {
+            ctn.innerHTML = `<div class="text-center py-6 text-slate-400">
+          <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-40"></i>
+          <p class="text-xs">空画布 — 在日历上拖拽框选或点击"新增"来创建第一个日程</p>
+        </div>`;
+            lucide.createIcons();
+            countEl.textContent = '(0)';
+        } else {
+            countEl.textContent = `(${courses.length})`;
+            // 按 dayOfWeek 排序
+            const sorted = [...courses].sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b
+                .startTime));
+            sorted.forEach(c => {
+                const dayNames = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+                const dayName = dayNames[c.dayOfWeek] || '未知';
+                const aiTag = c.isAiGenerated ?
+                    '<span class="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold ml-1">AI</span>' :
+                    '';
+
+                const div = document.createElement('div');
+                div.className =
+                    'p-2.5 border border-slate-100 rounded-xl flex justify-between items-center bg-slate-50 hover:bg-white hover:border-slate-200 transition-all cursor-pointer group';
+                div.innerHTML = `
+            <div class="flex items-center gap-2.5 truncate flex-1 min-w-0">
+              <div class="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm" style="background-color:${c.color}"></div>
+              <div class="truncate min-w-0 flex-1">
+                <p class="text-[11px] font-bold text-slate-700 truncate flex items-center gap-1">${c.title}${aiTag}</p>
+                <p class="text-[9px] text-slate-400 font-mono">${dayName} · ${c.startTime}-${c.endTime}${c.location ? ' · ' + c.location : ''}</p>
+              </div>
+            </div>
+            <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
+              <button onclick="event.stopPropagation(); openAddCourseForm('${c.id}')" class="text-slate-400 hover:text-indigo-600 p-1.5 rounded-lg hover:bg-indigo-50 transition-all" title="编辑">
+                <i data-lucide="edit" class="w-3 h-3"></i>
+              </button>
+              <button onclick="event.stopPropagation(); if(confirm('删除此日程？')){deleteCourse('${c.id}');showToast('已删除','success');}" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-all" title="删除">
+                <i data-lucide="trash-2" class="w-3 h-3"></i>
+              </button>
+            </div>`;
+                // 点击整行也可以编辑
+                div.addEventListener('click', () => openAddCourseForm(c.id));
+                ctn.appendChild(div);
+            });
+            lucide.createIcons();
+        }
+
+        // 刷新日历
+        refreshCalendarEvents();
+    }
+
+    // ==================== AI 排程引擎 ====================
+    async function runAiPlanner(event) {
+        event.preventDefault();
+        const goal = document.getElementById('goalText').value.trim();
+        const config = getApiConfig();
+        const btn = document.getElementById('planBtn');
+        const btnText = document.getElementById('planBtnText');
+
+        if (!goal) {
+            showToast('请描述您要安排的任务', 'error');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.classList.add('opacity-70');
+        btnText.innerHTML =
+            '<i data-lucide="loader-2" class="w-4 h-4 animate-spin inline-block mr-2"></i> 推理计算中...';
+        lucide.createIcons();
+
+        // 如果没有配置 API Key，使用演示模式
+        if (!config.key || !config.baseUrl) {
+            await simulateDemoPlanning(goal, btn, btnText);
+            return;
+        }
+
+        // 构建增强版 CoT Prompt
+        const systemPrompt = buildAiSystemPrompt(goal);
+
+        try {
+            const response = await axios.post(config.baseUrl, {
+                model: config.model || undefined,
+                messages: [
+                    { role: 'system', content: systemPrompt },
+                    { role: 'user', content: goal }
+                ],
+                temperature: 0.15,
+                max_tokens: 3000
+            }, {
+                headers: {
+                    "Content-Type": "application/json",
+                    "Authorization": `Bearer ${config.key}`
+                },
+                timeout: 60000
+            });
+
+            const rawContent = response.data.choices[0].message.content;
+            processAiResponse(rawContent, goal);
+        } catch (err) {
+            let errMsg = 'AI 调用失败：';
+            if (err.response) {
+                errMsg += `HTTP ${err.response.status}`;
+                if (err.response.data?.error?.message) errMsg += ` - ${err.response.data.error.message}`;
+            } else if (err.code === 'ECONNABORTED') {
+                errMsg += '请求超时（60秒），请检查网络或简化需求';
+            } else {
+                errMsg += err.message.slice(0, 200);
+            }
+            showErrorAlert(true, errMsg);
+            document.getElementById('thinkingBox').classList.add('hidden');
+        } finally {
+            btn.disabled = false;
+            btn.classList.remove('opacity-70');
+            btnText.innerText = '启动 AI 规划引擎';
+            lucide.createIcons();
+        }
+    }
+
+    /** 构建 AI 系统提示词 */
+    function buildAiSystemPrompt(userGoal) {
+        // 分析现有课程，生成空闲时段摘要
+        const freeSlotsSummary = analyzeFreeSlots();
+
+        return `你是精通时间统筹与学术排程的专家 AI。你的任务是根据用户需求，在现有课程表的空余时段中安排新任务。
+
+    【核心数据】
+    当前显示周周一日期: ${currentMonday.toISOString().split('T')[0]}
+    已有日程清单 (JSON):
+    ${JSON.stringify(courses.map(c => ({ title: c.title, dayOfWeek: c.dayOfWeek, startTime: c.startTime, endTime: c.endTime, location: c.location })), null, 2)}
+
+    【空闲时段分析】
+    ${freeSlotsSummary}
+
+    【用户需求】
+    "${userGoal}"
+
+    【排程约束法则 - 必须严格遵守】
+    1. ⚠️ 时段绝对不可重叠：你安排的 startTime 和 endTime 必须与已有同星期的任务完全错开，不得有任何交叉。
+    2. 🚫 睡眠禁区：23:00 到次日 08:00 禁止安排任何任务。
+    3. 📏 时长智能解析：从用户描述中提取时长需求。若用户说"3小时"，则安排3小时；若说"2-3小时"，取中间值2.5小时；若未明确时长，默认安排1.5小时。
+    4. 🎯 优先级与偏好：若用户指定了时间偏好（如"下午"、"早上"、"避开周三"），请严格遵循。
+    5. 📅 合理分布：避免将长任务切得过碎，尽量安排在连续时段内。
+    6. 🔢 dayOfWeek 编码：1=周一, 2=周二, 3=周三, 4=周四, 5=周五, 6=周六, 7=周日。
+
+    【强制输出规范】
+    你必须返回一个纯 JSON 对象，禁止包含任何 markdown 代码块标记、禁止任何额外说明文字。格式如下：
+    {
+      "reasoning": "详细的推演过程（200-400字）：说明你是如何分析空闲时段、如何匹配用户需求、以及最终决策的依据。",
+      "message": "给用户的简洁结论（50-100字）",
+      "plans": [
+        {
+          "title": "任务名称",
+          "dayOfWeek": 3,
+          "startTime": "14:00",
+          "endTime": "16:00",
+          "color": "#f59e0b",
+          "location": "建议地点（可选，可留空字符串）"
+        }
+      ]
+    }
+    若用户需求无法在当前课表中安排（时间完全被占满），请在 reasoning 中说明，并将 plans 设为空数组 []，在 message 中给出建议。`;
+    }
+
+    /** 分析现有课程的空闲时段 */
+    function analyzeFreeSlots() {
+        const dayNames = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+        let summary = '';
+        for (let d = 1; d <= 7; d++) {
+            const dayCourses = courses
+                .filter(c => c.dayOfWeek === d)
+                .sort((a, b) => a.startTime.localeCompare(b.startTime));
+            if (dayCourses.length === 0) {
+                summary += `${dayNames[d]}: 全天空闲 (08:00-23:00)\n`;
+            } else {
+                const busySlots = dayCourses.map(c => `${c.startTime}-${c.endTime}(${c.title})`).join(', ');
+                summary += `${dayNames[d]}: 已占用时段=[${busySlots}]`;
+                // 计算空闲
+                const freeGaps = [];
+                let cursor = '08:00';
+                for (const c of dayCourses) {
+                    if (cursor < c.startTime) freeGaps.push(`${cursor}-${c.startTime}`);
+                    cursor = c.endTime > cursor ? c.endTime : cursor;
+                }
+                if (cursor < '23:00') freeGaps.push(`${cursor}-23:00`);
+                if (freeGaps.length > 0) summary += ` | 空闲=[${freeGaps.join(', ')}]`;
+                summary += '\n';
+            }
+        }
+        return summary;
+    }
+
+    /** 处理 AI 返回的响应 */
+    function processAiResponse(rawContent, userGoal) {
+        // 尝试提取 JSON
+        let jsonStr = rawContent;
+        const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+            jsonStr = jsonMatch[0];
+        } else {
+            throw new Error('AI 未返回有效的 JSON 格式响应');
+        }
+
+        let parsed;
+        try {
+            parsed = JSON.parse(jsonStr);
+        } catch (parseErr) {
+            throw new Error(`JSON 解析失败: ${parseErr.message}\n原始响应片段: ${jsonStr.slice(0, 300)}`);
+        }
+
+        if (!parsed.plans || !Array.isArray(parsed.plans)) {
+            throw new Error('AI 响应缺少 plans 数组');
+        }
+
+        // 显示思考链
+        const thinkingBox = document.getElementById('thinkingBox');
+        const thinkingContent = document.getElementById('thinkingContent');
+        thinkingBox.classList.remove('hidden');
+        thinkingBox.classList.add('animate-slide-down');
+
+        let outputHTML = `<div class="mb-3"><span class="text-indigo-600 font-bold block mb-1">🧠 【思考推演链】</span><span class="opacity-85 text-[11px] leading-relaxed">${parsed.reasoning || '（AI 未提供详细推演过程）'}</span></div>`;
+        outputHTML +=
+            `<div class="mb-3"><span class="text-emerald-600 font-bold block mb-1">💬 【助理结论】</span><span class="text-[11px] leading-relaxed">${parsed.message || '已为您安排以下任务'}</span></div>`;
+
+        if (parsed.plans.length > 0) {
+            outputHTML +=
+                `<div><span class="text-amber-600 font-bold block mb-1">📋 【新增计划】</span><span class="text-[11px]">共 ${parsed.plans.length} 个任务切片已添加至课表</span></div>`;
+        } else {
+            outputHTML +=
+            `<div><span class="text-rose-600 font-bold block mb-1">⚠️ 【无法安排】</span><span class="text-[11px]">当前课表空余时段不足以满足需求，请调整时间偏好或减少任务时长。</span></div>`;
+        }
+        thinkingContent.innerHTML = outputHTML;
+
+        // 将计划添加到课程列表
+        const newPlans = parsed.plans || [];
+        let addedCount = 0;
+        newPlans.forEach(p => {
+            // 基本验证
+            if (!p.title || !p.dayOfWeek || !p.startTime || !p.endTime) return;
+            if (p.dayOfWeek < 1 || p.dayOfWeek > 7) return;
+            if (p.startTime >= p.endTime) return;
+            // 检查是否在睡眠禁区
+            if (p.startTime < '08:00' && p.endTime <= '08:00') return;
+            if (p.startTime >= '23:00') return;
+
+            p.id = 'ai_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+            p.isAiGenerated = true;
+            if (!p.color) p.color = '#f59e0b';
+            if (!p.location) p.location = '';
+            courses.push(p);
+            addedCount++;
+        });
+
+        if (addedCount > 0) {
+            renderCoursesList();
+            persistCourses();
+            triggerSuccessConfetti();
+            showErrorAlert(false);
+            showToast(`AI 推演成功！已添加 ${addedCount} 个任务`, 'success');
+        } else if (newPlans.length === 0) {
+            showErrorAlert(false);
+            showToast('AI 认为当前课表无法满足需求，请调整', 'error');
+        } else {
+            showErrorAlert(true, 'AI 返回的计划未通过验证，请重试');
+        }
+    }
+
+    /** 演示模式（无 API Key 时的模拟） */
+    async function simulateDemoPlanning(goal, btn, btnText) {
+        // 模拟延迟
+        await new Promise(r => setTimeout(r, 1200));
+
+        const thinkingBox = document.getElementById('thinkingBox');
+        const thinkingContent = document.getElementById('thinkingContent');
+        thinkingBox.classList.remove('hidden');
+        thinkingBox.classList.add('animate-slide-down');
+
+        const demoReasoning = `【演示模式 - 无 API Key】
+    1. 解析用户需求："${goal.slice(0, 80)}${goal.length > 80 ? '...' : ''}"
+    2. 扫描现有课表：共 ${courses.length} 个已有日程
+    3. 查找空档：分析周一至周日 08:00-23:00 的空余时段
+    4. 匹配时长与偏好：尝试在空闲时段中匹配合适的时间块
+    5. 生成排程方案（模拟）`;
+
+        thinkingContent.innerHTML = `
+      <div class="mb-3"><span class="text-indigo-600 font-bold block mb-1">🧠 【思考推演链】(演示)</span><span class="opacity-85 text-[11px] leading-relaxed">${demoReasoning}</span></div>
+      <div class="mb-3"><span class="text-emerald-600 font-bold block mb-1">💬 【助理结论】</span><span class="text-[11px] leading-relaxed">这是演示模式下的模拟排程。请配置 API Key 以获得真实的 AI 推理排程。</span></div>
+    `;
+
+        // 添加一个演示任务
+        const demoPlan = {
+            id: 'demo_' + Date.now(),
+            title: '📋 模拟排程任务',
+            dayOfWeek: 4,
+            startTime: '15:00',
+            endTime: '17:00',
+            color: '#f59e0b',
+            location: '建议：自习室',
+            isAiGenerated: true
+        };
+        courses.push(demoPlan);
+        renderCoursesList();
+        persistCourses();
+        triggerSuccessConfetti();
+        showToast('演示模式：已添加模拟任务（请配置 API Key 获得真实推理）', 'success');
+
+        btn.disabled = false;
+        btn.classList.remove('opacity-70');
+        btnText.innerText = '启动 AI 规划引擎';
+        lucide.createIcons();
+    }
+
+    // ==================== 辅助 UI 函数 ====================
+    function showErrorAlert(show, txt = '') {
+        const alert = document.getElementById('errorAlert');
+        if (show) {
+            alert.classList.remove('hidden');
+            alert.classList.add('animate-slide-down');
+            document.getElementById('errorMsg').innerText = txt;
+        } else {
+            alert.classList.add('hidden');
+        }
+    }
+
+    function showToast(msg, type = 'success') {
+        const existingToasts = document.querySelectorAll('.toast-notification');
+        existingToasts.forEach(t => t.remove());
+
+        const t = document.createElement('div');
+        t.className =
+            `toast-notification fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-5 py-3 rounded-full shadow-xl text-white font-bold text-xs flex items-center gap-2 transition-all duration-300 -translate-y-12 opacity-0 ${
+        type === 'success' ? 'bg-slate-900' : 'bg-rose-600'
+      }`;
+        t.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle-2' : 'alert-circle'}" class="w-4 h-4"></i><span>${msg}</span>`;
+        document.body.appendChild(t);
+        lucide.createIcons();
+
+        requestAnimationFrame(() => {
+            t.classList.remove('-translate-y-12', 'opacity-0');
+            t.classList.add('translate-y-0', 'opacity-100');
+        });
+
+        setTimeout(() => {
+            t.classList.add('-translate-y-12', 'opacity-0');
+            setTimeout(() => t.remove(), 350);
+        }, 2800);
+    }
+
+    function triggerSuccessConfetti() {
+        confetti({
+            particleCount: 80,
+            spread: 55,
+            origin: { y: 0.75, x: 0.5 },
+            colors: ['#4f46e5', '#8b5cf6', '#f59e0b', '#10b981', '#3b82f6']
+        });
+        setTimeout(() => {
+            confetti({
+                particleCount: 40,
+                spread: 35,
+                origin: { y: 0.8, x: 0.4 }
+            });
+        }, 200);
+    }
+
+    // ==================== 键盘快捷键 ====================
+    document.addEventListener('keydown', function(e) {
+        // Esc 关闭弹窗
+        if (e.key === 'Escape') {
+            const panel = document.getElementById('addCoursePanel');
+            if (!panel.classList.contains('hidden')) {
+                closeAddCourseForm();
+            }
+            const apiPanel = document.getElementById('apiPanel');
+            if (!apiPanel.classList.contains('hidden') && e.target.tagName !== 'INPUT') {
+                toggleApiSettings();
+            }
+        }
+        // Ctrl+N 新建课程
+        if (e.ctrlKey && e.key === 'n') {
+            e.preventDefault();
+            openAddCourseForm();
+        }
+        // Ctrl+T 回到本周
+        if (e.ctrlKey && e.key === 't') {
+            e.preventDefault();
+            jumpToTodayWeek();
+        }
+    });
+</script>
 </body>
 </html>
