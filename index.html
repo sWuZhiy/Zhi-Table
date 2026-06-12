@@ -1569,7 +1569,7 @@
             const countStr = courseCount > 0 ? ` [${courseCount}门]` : '';
             const mondayStr = formatDateShort(weekMonday), sundayStr = formatDateShort(weekSunday);
             const option = document.createElement('option');
-            option.value = weekMonday.toISOString().split('T')[0];
+            option.value = formatLocalDate(weekMonday);
             option.textContent = `第${weekNum}周 ${mondayStr}-${sundayStr}${countStr}`;
             option.className = 'week-selector-option';
             if (isSameDay(weekMonday, currentMonday)) { option.selected = true; option.className += ' current-week'; }
@@ -1587,6 +1587,7 @@
         calendarInstance.gotoDate(currentMonday);
         updateCurrentWeekLabel();
         updateSemesterProgress();
+        updateWeekSelectorSelection();
         renderCoursesList();
         showToast(`已切换至第${getWeekNumber(currentMonday)}周`, 'success');
     }
@@ -1631,7 +1632,7 @@
 
     function updateWeekSelectorSelection() {
         const selector = document.getElementById('weekSelector');
-        const targetValue = currentMonday.toISOString().split('T')[0];
+        const targetValue = formatLocalDate(currentMonday);
         const options = selector.querySelectorAll('option');
         let found = false;
         options.forEach(opt => { if (opt.value === targetValue) { opt.selected = true;
@@ -1660,6 +1661,14 @@
 
     function formatDateShort(date) { const month = String(date.getMonth() + 1).padStart(2, '0'),
             day = String(date.getDate()).padStart(2, '0'); return `${month}/${day}`; }
+
+    /** 本地日期格式化 YYYY-MM-DD（避免 toISOString 的 UTC 时区偏移） */
+    function formatLocalDate(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}-${m}-${d}`;
+    }
 
     function isSameDay(d1, d2) { return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1
             .getDate() === d2.getDate(); }
