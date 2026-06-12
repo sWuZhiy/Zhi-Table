@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 智能课表规划舱 - WeekUp 风格增强版 v7.0</title>
+    <title>AI 智能课表规划舱 - WeekUp 风格增强版 v8.0</title>
 
     <script src="https://cdn.tailwindcss.com">
     </script>
@@ -14,6 +14,8 @@
     <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js">
     </script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.2/dist/confetti.browser.min.js">
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
     </script>
 
     <style>
@@ -92,7 +94,6 @@
             border-color: #ef4444 !important;
         }
 
-        /* 自定义动画 */
         @keyframes slideDown {
             from {
                 opacity: 0;
@@ -130,6 +131,93 @@
             font-weight: 700;
             color: #4338ca;
         }
+
+        /* 导入预览表格样式 */
+        .preview-table-container {
+            max-height: 320px;
+            overflow-y: auto;
+            border-radius: 0.75rem;
+            border: 1px solid #e2e8f0;
+        }
+        .preview-table-container table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.7rem;
+        }
+        .preview-table-container thead {
+            position: sticky;
+            top: 0;
+            z-index: 2;
+        }
+        .preview-table-container thead th {
+            background: #f8fafc;
+            padding: 0.6rem 0.5rem;
+            text-align: left;
+            font-weight: 700;
+            color: #475569;
+            border-bottom: 2px solid #e2e8f0;
+            font-size: 0.68rem;
+            letter-spacing: 0.01em;
+            white-space: nowrap;
+        }
+        .preview-table-container tbody td {
+            padding: 0.5rem;
+            border-bottom: 1px solid #f1f5f9;
+            color: #334155;
+            white-space: nowrap;
+        }
+        .preview-table-container tbody tr:hover {
+            background: #f8fafc;
+        }
+        .preview-table-container tbody tr:last-child td {
+            border-bottom: none;
+        }
+
+        /* 下拉菜单 */
+        .dropdown-menu {
+            position: absolute;
+            right: 0;
+            top: 100%;
+            margin-top: 0.35rem;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.75rem;
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
+            z-index: 60;
+            min-width: 200px;
+            overflow: hidden;
+            animation: slideDown 0.18s ease-out;
+        }
+        .dropdown-menu button {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            width: 100%;
+            padding: 0.6rem 1rem;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #475569;
+            transition: all 0.1s;
+            text-align: left;
+            border: none;
+            background: transparent;
+            cursor: pointer;
+        }
+        .dropdown-menu button:hover {
+            background: #f1f5f9;
+            color: #1e293b;
+        }
+        .dropdown-menu button.danger-item {
+            color: #ef4444;
+        }
+        .dropdown-menu button.danger-item:hover {
+            background: #fef2f2;
+        }
+        .dropdown-menu .divider {
+            height: 1px;
+            background: #e2e8f0;
+            margin: 0.25rem 0;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col antialiased">
@@ -151,111 +239,140 @@
                 <div class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></div>
                 <span class="text-[9px] font-bold text-emerald-700">API 就绪</span>
             </div>
-            <button onclick="toggleApiSettings()"
-            class="text-slate-600 hover:text-indigo-600 flex items-center gap-1.5 text-xs font-bold bg-slate-100 hover:bg-indigo-50 px-3.5 py-2 rounded-lg transition-all">
-                <i data-lucide="settings-2" class="w-4 h-4"></i><span>配置网关</span>
+
+            <!-- 导入/导出按钮组 -->
+            <div class="relative" id="importExportDropdown">
+                <button onclick="toggleImportExportMenu()"
+                class="text-slate-600 hover:text-indigo-600 flex items-center gap-1.5 text-xs font-bold bg-slate-100 hover:bg-indigo-50 px-3.5 py-2 rounded-lg transition-all border border-slate-200 hover:border-indigo-200">
+                <i data-lucide="download" class="w-4 h-4"></i><span>导入/导出</span>
+                <i data-lucide="chevron-down" class="w-3 h-3 ml-0.5"></i>
             </button>
-        </div>
-    </header>
-
-    <!-- API 配置面板 -->
-    <div id="apiPanel" class="hidden bg-white border-b border-slate-200 p-6 shadow-lg absolute w-full z-30 animate-slide-down">
-        <div class="max-w-5xl mx-auto">
-            <div class="flex items-center justify-between mb-5">
-                <div class="flex items-center gap-2">
-                    <i data-lucide="plug" class="w-4 h-4 text-indigo-500"></i>
-                    <h3 class="text-sm font-bold text-slate-800">模型网关接入点配置</h3>
-                </div>
-                <div class="flex items-center gap-2">
-                    <button onclick="saveApiKeys()"
-                    class="flex items-center gap-1.5 bg-emerald-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-600 shadow-sm transition-all active:scale-95">
-                        <i data-lucide="save" class="w-3.5 h-3.5"></i><span>保存</span>
-                    </button>
-                    <button onclick="testApiKey()" id="testKeyBtn"
-                    class="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-700 shadow-sm transition-all active:scale-95">
-                        <i data-lucide="activity" class="w-3.5 h-3.5"></i><span>Ping 测试</span>
-                    </button>
-                </div>
+            <div id="importExportMenu" class="dropdown-menu hidden">
+                <button onclick="triggerImportFile(); toggleImportExportMenu();">
+                    <i data-lucide="upload" class="w-3.5 h-3.5 text-indigo-500"></i> 导入课表文件
+                </button>
+                <div class="divider"></div>
+                <button onclick="exportAsJSON(); toggleImportExportMenu();">
+                    <i data-lucide="file-json" class="w-3.5 h-3.5 text-amber-500"></i> 导出为 JSON
+                </button>
+                <button onclick="exportAsICS(); toggleImportExportMenu();">
+                    <i data-lucide="calendar" class="w-3.5 h-3.5 text-emerald-500"></i> 导出为 ICS (iCalendar)
+                </button>
+                <div class="divider"></div>
+                <button onclick="clearAllEvents(); toggleImportExportMenu();" class="danger-item">
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> 清空所有日程
+                </button>
             </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-600 mb-1.5">1. Base URL (端点)</label>
-                    <input list="url-presets" type="text" id="apiBaseUrl"
-                    class="w-full p-2.5 text-xs border border-slate-200 rounded-lg bg-slate-50 font-mono focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                    placeholder="https://api.deepseek.com/chat/completions">
-                    <datalist id="url-presets">
-                        <option value="https://ark.cn-beijing.volces.com/api/v3/chat/completions" label="火山引擎(豆包) 官方">
-                        </option>
-                        <option value="https://api.deepseek.com/chat/completions" label="DeepSeek 官方"></option>
-                        <option value="https://api.openai.com/v1/chat/completions" label="OpenAI 官方"></option>
-                    </datalist>
-                </div>
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-600 mb-1.5">2. Model ID</label>
-                    <input type="text" id="modelName"
-                    class="w-full p-2.5 text-xs border border-slate-200 rounded-lg bg-slate-50 font-mono focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                    placeholder="deepseek-chat">
-                </div>
-                <div>
-                    <label class="block text-[11px] font-bold text-slate-600 mb-1.5">3. API Key</label>
-                    <input type="password" id="apiKey"
-                    class="w-full p-2.5 text-xs border border-slate-200 rounded-lg bg-slate-50 font-mono focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
-                    placeholder="sk-...">
-                </div>
-            </div>
-            <p class="text-[10px] text-slate-400 mt-3">提示：支持兼容 OpenAI 格式的任意 API 端点。密钥仅存储在浏览器本地。</p>
         </div>
-    </div>
 
-    <!-- 主体 -->
-    <main class="flex-1 max-w-[1600px] w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0 relative">
+        <!-- 隐藏的文件输入 -->
+        <input type="file" id="fileInput" accept=".xlsx,.xls,.ics,.csv" class="hidden" onchange="handleFileImport(event)">
 
-        <!-- 左侧面板 -->
-        <div class="lg:col-span-4 flex flex-col gap-5 overflow-y-auto max-h-[calc(100vh-100px)] pr-1">
+        <button onclick="toggleApiSettings()"
+        class="text-slate-600 hover:text-indigo-600 flex items-center gap-1.5 text-xs font-bold bg-slate-100 hover:bg-indigo-50 px-3.5 py-2 rounded-lg transition-all">
+        <i data-lucide="settings-2" class="w-4 h-4"></i><span>配置网关</span>
+    </button>
+</div>
+</header>
 
-            <!-- AI 排程卡片 -->
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                <div class="flex items-center gap-2 mb-2">
-                    <i data-lucide="sparkles" class="text-indigo-500 w-5 h-5"></i>
-                    <h2 class="text-xs font-bold text-slate-800 uppercase tracking-widest">CoT 强约束智能排程</h2>
-                </div>
-                <p class="text-[11px] text-slate-500 mb-4 leading-relaxed">
-                    AI 将执行严格的推演算法，分析您的现有日程以寻找<strong>无碰撞</strong>的空余时间段。请在下方<strong>自然描述</strong>任务需求（含时长、优先级、时间偏好等）。
-                </p>
-
-                <form onsubmit="runAiPlanner(event)" class="flex flex-col gap-4">
-                    <div>
-                        <textarea id="goalText"
-                        placeholder="例如：安排3小时的深度学习代码调试，优先下午课程结束后，避开周三组会。或：每天安排1小时论文阅读，放在早上。"
-                        class="w-full p-3 text-xs border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 min-h-[80px] resize-none transition-all"
-                    required></textarea>
-                </div>
-                <div class="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-3 text-[10px] text-indigo-700 flex items-start gap-2">
-                    <i data-lucide="info" class="w-3.5 h-3.5 flex-shrink-0 mt-0.5"></i>
-                    <span>AI 会自动解析您描述的<strong>时长、优先级与偏好</strong>，结合现有课表寻找最佳空档。无需手动设置时长参数。</span>
-                </div>
-                <button type="submit" id="planBtn"
-                class="w-full py-3 bg-slate-900 hover:bg-slate-800 rounded-xl text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed">
-                <i data-lucide="bot" class="w-4 h-4"></i>
-                <span id="planBtnText">启动 AI 规划引擎</span>
-            </button>
-        </form>
-    </div>
-
-    <!-- AI 思考链输出 -->
-    <div id="thinkingBox" class="hidden bg-indigo-50/80 border border-indigo-100 p-5 rounded-2xl flex flex-col gap-3 shadow-inner animate-slide-down">
-        <div class="flex items-center justify-between border-b border-indigo-200/60 pb-2">
+<!-- API 配置面板 -->
+<div id="apiPanel" class="hidden bg-white border-b border-slate-200 p-6 shadow-lg absolute w-full z-30 animate-slide-down">
+    <div class="max-w-5xl mx-auto">
+        <div class="flex items-center justify-between mb-5">
             <div class="flex items-center gap-2">
-                <i data-lucide="cpu" class="w-4 h-4 text-indigo-700"></i>
-                <span class="text-[11px] text-indigo-800 font-bold uppercase tracking-wider">AI 运算流与分析报告</span>
+                <i data-lucide="plug" class="w-4 h-4 text-indigo-500"></i>
+                <h3 class="text-sm font-bold text-slate-800">模型网关接入点配置</h3>
             </div>
-            <button onclick="document.getElementById('thinkingBox').classList.add('hidden')"
-            class="text-indigo-400 hover:text-indigo-700 transition-colors">
-            <i data-lucide="x" class="w-3 h-3"></i>
+            <div class="flex items-center gap-2">
+                <button onclick="saveApiKeys()"
+                class="flex items-center gap-1.5 bg-emerald-500 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-emerald-600 shadow-sm transition-all active:scale-95">
+                <i data-lucide="save" class="w-3.5 h-3.5"></i><span>保存</span>
+            </button>
+            <button onclick="testApiKey()" id="testKeyBtn"
+            class="flex items-center gap-1.5 bg-indigo-600 text-white px-4 py-1.5 rounded-lg text-xs font-bold hover:bg-indigo-700 shadow-sm transition-all active:scale-95">
+            <i data-lucide="activity" class="w-3.5 h-3.5"></i><span>Ping 测试</span>
         </button>
     </div>
-    <div id="thinkingContent" class="text-[11px] leading-relaxed text-slate-700 font-medium whitespace-pre-wrap"></div>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-3 gap-5">
+    <div>
+        <label class="block text-[11px] font-bold text-slate-600 mb-1.5">1. Base URL (端点)</label>
+        <input list="url-presets" type="text" id="apiBaseUrl"
+        class="w-full p-2.5 text-xs border border-slate-200 rounded-lg bg-slate-50 font-mono focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+        placeholder="https://api.deepseek.com/chat/completions">
+        <datalist id="url-presets">
+            <option value="https://ark.cn-beijing.volces.com/api/v3/chat/completions" label="火山引擎(豆包) 官方">
+            </option>
+            <option value="https://api.deepseek.com/chat/completions" label="DeepSeek 官方"></option>
+            <option value="https://api.openai.com/v1/chat/completions" label="OpenAI 官方"></option>
+        </datalist>
+    </div>
+    <div>
+        <label class="block text-[11px] font-bold text-slate-600 mb-1.5">2. Model ID</label>
+        <input type="text" id="modelName"
+        class="w-full p-2.5 text-xs border border-slate-200 rounded-lg bg-slate-50 font-mono focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+        placeholder="deepseek-chat">
+    </div>
+    <div>
+        <label class="block text-[11px] font-bold text-slate-600 mb-1.5">3. API Key</label>
+        <input type="password" id="apiKey"
+        class="w-full p-2.5 text-xs border border-slate-200 rounded-lg bg-slate-50 font-mono focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
+        placeholder="sk-...">
+    </div>
+</div>
+<p class="text-[10px] text-slate-400 mt-3">提示：支持兼容 OpenAI 格式的任意 API 端点。密钥仅存储在浏览器本地。</p>
+</div>
+</div>
+
+<!-- 主体 -->
+<main class="flex-1 max-w-[1600px] w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0 relative">
+
+    <!-- 左侧面板 -->
+    <div class="lg:col-span-4 flex flex-col gap-5 overflow-y-auto max-h-[calc(100vh-100px)] pr-1">
+
+        <!-- AI 排程卡片 -->
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+            <div class="flex items-center gap-2 mb-2">
+                <i data-lucide="sparkles" class="text-indigo-500 w-5 h-5"></i>
+                <h2 class="text-xs font-bold text-slate-800 uppercase tracking-widest">CoT 强约束智能排程</h2>
+            </div>
+            <p class="text-[11px] text-slate-500 mb-4 leading-relaxed">
+                AI 将执行严格的推演算法，分析您的现有日程以寻找<strong>无碰撞</strong>的空余时间段。请在下方<strong>自然描述</strong>任务需求（含时长、优先级、时间偏好等）。
+            </p>
+
+            <form onsubmit="runAiPlanner(event)" class="flex flex-col gap-4">
+                <div>
+                    <textarea id="goalText"
+                    placeholder="例如：安排3小时的深度学习代码调试，优先下午课程结束后，避开周三组会。或：每天安排1小时论文阅读，放在早上。"
+                    class="w-full p-3 text-xs border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 min-h-[80px] resize-none transition-all"
+                required></textarea>
+            </div>
+            <div class="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-3 text-[10px] text-indigo-700 flex items-start gap-2">
+                <i data-lucide="info" class="w-3.5 h-3.5 flex-shrink-0 mt-0.5"></i>
+                <span>AI 会自动解析您描述的<strong>时长、优先级与偏好</strong>，结合现有课表寻找最佳空档。无需手动设置时长参数。</span>
+            </div>
+            <button type="submit" id="planBtn"
+            class="w-full py-3 bg-slate-900 hover:bg-slate-800 rounded-xl text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed">
+            <i data-lucide="bot" class="w-4 h-4"></i>
+            <span id="planBtnText">启动 AI 规划引擎</span>
+        </button>
+    </form>
+</div>
+
+<!-- AI 思考链输出 -->
+<div id="thinkingBox" class="hidden bg-indigo-50/80 border border-indigo-100 p-5 rounded-2xl flex flex-col gap-3 shadow-inner animate-slide-down">
+    <div class="flex items-center justify-between border-b border-indigo-200/60 pb-2">
+        <div class="flex items-center gap-2">
+            <i data-lucide="cpu" class="w-4 h-4 text-indigo-700"></i>
+            <span class="text-[11px] text-indigo-800 font-bold uppercase tracking-wider">AI 运算流与分析报告</span>
+        </div>
+        <button onclick="document.getElementById('thinkingBox').classList.add('hidden')"
+        class="text-indigo-400 hover:text-indigo-700 transition-colors">
+        <i data-lucide="x" class="w-3 h-3"></i>
+    </button>
+</div>
+<div id="thinkingContent" class="text-[11px] leading-relaxed text-slate-700 font-medium whitespace-pre-wrap"></div>
 </div>
 
 <!-- 错误提示 -->
@@ -386,10 +503,232 @@
     </div>
 </div>
 </div>
+
+<!-- 导入预览弹窗 -->
+<div id="importPreviewPanel" class="hidden fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center backdrop-blur-sm transition-opacity">
+    <div class="bg-white p-6 rounded-2xl w-[720px] max-w-[95vw] shadow-2xl border border-slate-200 animate-slide-down max-h-[90vh] flex flex-col">
+        <div class="flex items-center justify-between mb-4 flex-shrink-0">
+            <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-500"></i>
+                <span>课表导入预览</span>
+                <span id="importCountBadge" class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold"></span>
+            </h3>
+            <button onclick="closeImportPreview()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+
+        <p class="text-[11px] text-slate-500 mb-3 flex-shrink-0">
+            系统已自动识别表头并完成解析。请核对下方预览数据，确认无误后选择导入模式。
+        </p>
+
+        <!-- 预览表格 -->
+        <div class="preview-table-container flex-1 min-h-0 mb-4" id="previewTableContainer">
+            <table id="previewTable">
+                <thead><tr><th>#</th><th>课程名称</th><th>星期</th><th>开始时间</th><th>结束时间</th><th>地点</th></tr></thead>
+                <tbody id="previewTableBody"></tbody>
+            </table>
+        </div>
+
+        <!-- 导入模式选择 -->
+        <div class="flex-shrink-0 border-t border-slate-100 pt-4">
+            <div class="flex items-center gap-3 mb-3">
+                <span class="text-[11px] font-bold text-slate-600">导入模式：</span>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="radio" name="importMode" value="merge" checked class="accent-indigo-600 w-3.5 h-3.5">
+                    <span class="text-[11px] text-slate-700 font-medium">合并到现有课表</span>
+                </label>
+                <label class="flex items-center gap-1.5 cursor-pointer">
+                    <input type="radio" name="importMode" value="replace" class="accent-indigo-600 w-3.5 h-3.5">
+                    <span class="text-[11px] text-slate-700 font-medium">完全替换现有课表</span>
+                </label>
+            </div>
+            <div class="flex items-center justify-between">
+                <span id="importInfoText" class="text-[10px] text-slate-400"></span>
+                <div class="flex gap-2">
+                    <button onclick="closeImportPreview()"
+                    class="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all">取消</button>
+                    <button onclick="confirmImport()"
+                    class="px-5 py-2 text-xs font-bold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95 transition-all shadow-sm flex items-center gap-1.5">
+                    <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>确认导入
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
 </div>
 </main>
 
 <script>
+    // ==================== 节次时间映射表（常见高校通用） ====================
+    const PERIOD_TIME_MAP = [
+        { period: 1, start: '08:00', end: '08:45' },
+        { period: 2, start: '08:50', end: '09:35' },
+        { period: 3, start: '09:50', end: '10:35' },
+        { period: 4, start: '10:40', end: '11:25' },
+        { period: 5, start: '11:30', end: '12:15' },
+        { period: 6, start: '13:30', end: '14:15' },
+        { period: 7, start: '14:20', end: '15:05' },
+        { period: 8, start: '15:20', end: '16:05' },
+        { period: 9, start: '16:10', end: '16:55' },
+        { period: 10, start: '18:00', end: '18:45' },
+        { period: 11, start: '18:50', end: '19:35' },
+        { period: 12, start: '19:40', end: '20:25' },
+    ];
+
+    /** 根据节次范围获取时间 */
+    function getTimeFromPeriods(periodStart, periodEnd) {
+        const startSlot = PERIOD_TIME_MAP.find(p => p.period === periodStart);
+        const endSlot = PERIOD_TIME_MAP.find(p => p.period === periodEnd);
+        if (startSlot && endSlot) {
+            return { startTime: startSlot.start, endTime: endSlot.end };
+        }
+        if (startSlot) {
+            return { startTime: startSlot.start, endTime: startSlot.end };
+        }
+        return null;
+    }
+
+    /** 解析节次字符串，如 "1-2", "第1-2节", "1,2", "第3节" */
+    function parsePeriodString(str) {
+        if (!str) return null;
+        // 清理中文和空格
+        let cleaned = str.replace(/第|节|课/g, '').replace(/\s+/g, '').trim();
+        // 尝试匹配 "1-2" 或 "1,2" 或 "1"
+        const rangeMatch = cleaned.match(/^(\d+)[-–—](\d+)$/);
+        const commaMatch = cleaned.match(/^(\d+),(\d+)$/);
+        const singleMatch = cleaned.match(/^(\d+)$/);
+        if (rangeMatch) {
+            return getTimeFromPeriods(parseInt(rangeMatch[1]), parseInt(rangeMatch[2]));
+        }
+        if (commaMatch) {
+            return getTimeFromPeriods(parseInt(commaMatch[1]), parseInt(commaMatch[2]));
+        }
+        if (singleMatch) {
+            return getTimeFromPeriods(parseInt(singleMatch[1]), parseInt(singleMatch[1]));
+        }
+        return null;
+    }
+
+    /** 解析时间范围字符串，如 "08:00-09:35", "8:00-9:35" */
+    function parseTimeRangeString(str) {
+        if (!str) return null;
+        const cleaned = str.replace(/\s+/g, '').trim();
+        const match = cleaned.match(/^(\d{1,2}):(\d{2})\s*[-–—]\s*(\d{1,2}):(\d{2})$/);
+        if (match) {
+            const sh = String(parseInt(match[1])).padStart(2, '0');
+            const sm = match[2];
+            const eh = String(parseInt(match[3])).padStart(2, '0');
+            const em = match[4];
+            return { startTime: `${sh}:${sm}`, endTime: `${eh}:${em}` };
+        }
+        return null;
+    }
+
+    /** 综合解析时间列（先尝试直接时间格式，再尝试节次格式） */
+    function parseTimeColumn(value) {
+        if (!value) return null;
+        const str = String(value).trim();
+        // 先尝试直接时间格式
+        const timeResult = parseTimeRangeString(str);
+        if (timeResult) return timeResult;
+        // 再尝试节次格式
+        const periodResult = parsePeriodString(str);
+        if (periodResult) return periodResult;
+        return null;
+    }
+
+    /** 解析星期字符串 */
+    function parseDayOfWeek(str) {
+        if (!str) return null;
+        const s = String(str).trim();
+        // 数字格式
+        const numMatch = s.match(/^(\d)$/);
+        if (numMatch) {
+            const n = parseInt(numMatch[1]);
+            if (n >= 1 && n <= 7) return n;
+        }
+        // 中文格式
+        const dayMap = {
+            '周一': 1,
+            '星期一': 1,
+            '周二': 2,
+            '星期二': 2,
+            '周三': 3,
+            '星期三': 3,
+            '周四': 4,
+            '星期四': 4,
+            '周五': 5,
+            '星期五': 5,
+            '周六': 6,
+            '星期六': 6,
+            '周日': 7,
+            '星期日': 7,
+            '星期天': 7,
+            '周天': 7,
+        };
+        for (const [key, val] of Object.entries(dayMap)) {
+            if (s.includes(key)) return val;
+        }
+        // 英文格式
+        const engMap = {
+            'mon': 1,
+            'monday': 1,
+            'tue': 2,
+            'tuesday': 2,
+            'wed': 3,
+            'wednesday': 3,
+            'thu': 4,
+            'thursday': 4,
+            'fri': 5,
+            'friday': 5,
+            'sat': 6,
+            'saturday': 6,
+            'sun': 7,
+            'sunday': 7,
+        };
+        const lower = s.toLowerCase();
+        for (const [key, val] of Object.entries(engMap)) {
+            if (lower.includes(key)) return val;
+        }
+        return null;
+    }
+
+    /** 识别列名对应的字段类型 */
+    function identifyColumnType(headerName) {
+        const h = String(headerName).toLowerCase().trim();
+        // 课程名称
+        if (/课程名|课名|名称|课程|科目|课题|标题|title|name|course|subject|summary/.test(h)) {
+            return 'title';
+        }
+        // 星期
+        if (/星期|周几|上课星期|day|week|星期几|周次/.test(h)) {
+            return 'dayOfWeek';
+        }
+        // 时间/节次
+        if (/时间|节次|上课时间|时段|period|time|节数/.test(h)) {
+            return 'time';
+        }
+        // 地点
+        if (/地点|教室|上课地点|位置|location|place|room|教学楼/.test(h)) {
+            return 'location';
+        }
+        // 教师
+        if (/教师|老师|讲师|授课教师|teacher|instructor/.test(h)) {
+            return 'teacher';
+        }
+        // 开始时间
+        if (/开始时间|起始时间|start|begin/.test(h) && !/结束/.test(h)) {
+            return 'startTime';
+        }
+        // 结束时间
+        if (/结束时间|截止时间|end|finish/.test(h) && !/开始/.test(h)) {
+            return 'endTime';
+        }
+        return null;
+    }
+
     // ==================== 全局状态 ====================
     let courses = [
         { id: 'c1', title: '现代物理概论', dayOfWeek: 1, startTime: '08:00', endTime: '09:30', color: '#3b82f6',
@@ -398,42 +737,592 @@
             location: '会议室', isAiGenerated: false }
     ];
     let calendarInstance = null;
-    let currentMonday = null; // 当前日历显示周的周一日期（核心状态）
-    const SEMESTER_START = new Date(2026, 1, 23); // 学期起始：2026年2月23日（周一）第1周
+    let currentMonday = null;
+    const SEMESTER_START = new Date(2026, 1, 23);
+    let pendingImportCourses = [];
+    let importSourceFileName = '';
 
     // ==================== 初始化 ====================
     document.addEventListener('DOMContentLoaded', () => {
-        // 加载 API 配置
         document.getElementById('apiBaseUrl').value = localStorage.getItem('apiBaseUrl') || '';
         document.getElementById('modelName').value = localStorage.getItem('modelName') || '';
         document.getElementById('apiKey').value = localStorage.getItem('apiKey') || '';
 
-        // 加载课程数据
         loadCoursesFromStorage();
-        // 初始化当前周一
         initCurrentMonday();
-        // 填充周选择器
         populateWeekSelector();
-        // 初始化图标
         lucide.createIcons();
-        // 初始化日历
         initFullCalendar();
-        // 渲染课程列表
         renderCoursesList();
-        // 检查网络状态
         checkNetworkStatusDisplay();
-        // 更新当前周标签
         updateCurrentWeekLabel();
+
+        // 点击页面其他位置关闭导入导出菜单
+        document.addEventListener('click', function(e) {
+            const dropdown = document.getElementById('importExportDropdown');
+            const menu = document.getElementById('importExportMenu');
+            if (menu && !menu.classList.contains('hidden') && dropdown && !dropdown.contains(e.target)) {
+                menu.classList.add('hidden');
+            }
+        });
     });
 
-    /** 初始化 currentMonday 为当前日期所在周的周一 */
     function initCurrentMonday() {
         const today = new Date();
-        const dayOfWeek = today.getDay(); // 0=周日
+        const dayOfWeek = today.getDay();
         const diff = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
         currentMonday = new Date(today);
         currentMonday.setDate(today.getDate() + diff);
         currentMonday.setHours(0, 0, 0, 0);
+    }
+
+    // ==================== 导入/导出菜单 ====================
+    function toggleImportExportMenu() {
+        const menu = document.getElementById('importExportMenu');
+        menu.classList.toggle('hidden');
+        if (!menu.classList.contains('hidden')) {
+            menu.style.animation = 'none';
+            menu.offsetHeight;
+            menu.style.animation = 'slideDown 0.18s ease-out';
+        }
+        lucide.createIcons();
+    }
+
+    function triggerImportFile() {
+        document.getElementById('fileInput').click();
+    }
+
+    // ==================== 文件导入处理 ====================
+    async function handleFileImport(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        importSourceFileName = file.name;
+        const ext = file.name.split('.').pop().toLowerCase();
+
+        try {
+            if (ext === 'xlsx' || ext === 'xls') {
+                await parseXLSXFile(file);
+            } else if (ext === 'ics') {
+                await parseICSFile(file);
+            } else if (ext === 'csv') {
+                await parseCSVFile(file);
+            } else {
+                showToast('不支持的文件格式，请使用 .xlsx、.ics 或 .csv 文件', 'error');
+                return;
+            }
+
+            if (pendingImportCourses.length === 0) {
+                showToast('未能从文件中解析出有效的课程数据，请检查文件格式', 'error');
+                return;
+            }
+
+            showImportPreview();
+        } catch (err) {
+            console.error('文件解析错误:', err);
+            showToast('文件解析失败：' + err.message.slice(0, 150), 'error');
+        } finally {
+            // 重置文件输入
+            document.getElementById('fileInput').value = '';
+        }
+    }
+
+    /** 解析 XLSX 文件 */
+    async function parseXLSXFile(file) {
+        const data = await file.arrayBuffer();
+        const workbook = XLSX.read(data, { type: 'array' });
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
+
+        if (jsonData.length === 0) {
+            throw new Error('文件中没有数据');
+        }
+
+        const headers = Object.keys(jsonData[0]);
+        // 识别列映射
+        const columnMap = {};
+        headers.forEach(h => {
+            const type = identifyColumnType(h);
+            if (type) {
+                columnMap[type] = columnMap[type] || [];
+                columnMap[type].push(h);
+            }
+        });
+
+        // 优先使用第一个匹配的列
+        const getCol = (type) => {
+            if (columnMap[type] && columnMap[type].length > 0) return columnMap[type][0];
+            return null;
+        };
+
+        const titleCol = getCol('title');
+        const dayCol = getCol('dayOfWeek');
+        const timeCol = getCol('time');
+        const locationCol = getCol('location');
+        const teacherCol = getCol('teacher');
+        const startTimeCol = getCol('startTime');
+        const endTimeCol = getCol('endTime');
+
+        const results = [];
+        const colorPalette = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#ec4899', '#06b6d4', '#f97316',
+            '#6366f1', '#14b8a6'
+        ];
+        let colorIdx = 0;
+
+        for (let i = 0; i < jsonData.length; i++) {
+            const row = jsonData[i];
+            const title = titleCol ? String(row[titleCol] || '').trim() : '';
+            if (!title) continue;
+
+            let dayOfWeek = null;
+            if (dayCol) {
+                dayOfWeek = parseDayOfWeek(String(row[dayCol] || ''));
+            }
+
+            let startTime = null;
+            let endTime = null;
+
+            // 优先使用独立的开始/结束时间列
+            if (startTimeCol && endTimeCol) {
+                const st = String(row[startTimeCol] || '').trim();
+                const et = String(row[endTimeCol] || '').trim();
+                const timeResult = parseTimeRangeString(`${st}-${et}`);
+                if (timeResult) {
+                    startTime = timeResult.startTime;
+                    endTime = timeResult.endTime;
+                }
+            }
+
+            // 其次使用时间列
+            if (!startTime && timeCol) {
+                const timeVal = String(row[timeCol] || '').trim();
+                const timeResult = parseTimeColumn(timeVal);
+                if (timeResult) {
+                    startTime = timeResult.startTime;
+                    endTime = timeResult.endTime;
+                }
+            }
+
+            // 如果还是没有解析到时间，跳过
+            if (!startTime || !endTime) continue;
+            if (!dayOfWeek) continue;
+
+            let location = locationCol ? String(row[locationCol] || '').trim() : '';
+            const teacher = teacherCol ? String(row[teacherCol] || '').trim() : '';
+            if (teacher && !location) {
+                location = teacher;
+            } else if (teacher && location) {
+                location = `${location} (${teacher})`;
+            }
+
+            results.push({
+                title,
+                dayOfWeek,
+                startTime,
+                endTime,
+                location,
+                color: colorPalette[colorIdx % colorPalette.length],
+                isAiGenerated: false,
+            });
+            colorIdx++;
+        }
+
+        pendingImportCourses = results;
+    }
+
+    /** 解析 ICS 文件 */
+    async function parseICSFile(file) {
+        const text = await file.text();
+        // 展开折叠行
+        const unfolded = text.replace(/\r?\n\s+/g, '');
+        const lines = unfolded.split(/\r?\n/);
+
+        const events = [];
+        let currentEvent = null;
+        let inVEvent = false;
+
+        for (const line of lines) {
+            const trimmed = line.trim();
+            if (trimmed === 'BEGIN:VEVENT') {
+                inVEvent = true;
+                currentEvent = {};
+            } else if (trimmed === 'END:VEVENT') {
+                inVEvent = false;
+                if (currentEvent && currentEvent.summary && currentEvent.startTime && currentEvent.endTime && currentEvent
+                    .dayOfWeek) {
+                    events.push(currentEvent);
+                }
+                currentEvent = null;
+            } else if (inVEvent && currentEvent) {
+                const colonIdx = trimmed.indexOf(':');
+                if (colonIdx === -1) continue;
+                const propName = trimmed.substring(0, colonIdx).toUpperCase();
+                const propValue = trimmed.substring(colonIdx + 1);
+
+                // 处理属性参数
+                let cleanPropName = propName.split(';')[0];
+                const params = {};
+                const paramParts = propName.split(';');
+                for (let i = 1; i < paramParts.length; i++) {
+                    const eqIdx = paramParts[i].indexOf('=');
+                    if (eqIdx !== -1) {
+                        params[paramParts[i].substring(0, eqIdx).toUpperCase()] = paramParts[i].substring(eqIdx + 1);
+                    }
+                }
+
+                if (cleanPropName === 'SUMMARY') {
+                    currentEvent.summary = propValue.replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\n/g, ' ').trim();
+                } else if (cleanPropName === 'LOCATION') {
+                    currentEvent.location = propValue.replace(/\\,/g, ',').trim();
+                } else if (cleanPropName === 'DTSTART') {
+                    const dt = parseICSTime(propValue, params);
+                    if (dt) {
+                        currentEvent.startTime = dt.timeStr;
+                        if (dt.dayOfWeek) currentEvent.dayOfWeek = dt.dayOfWeek;
+                    }
+                } else if (cleanPropName === 'DTEND') {
+                    const dt = parseICSTime(propValue, params);
+                    if (dt) {
+                        currentEvent.endTime = dt.timeStr;
+                        if (dt.dayOfWeek && !currentEvent.dayOfWeek) currentEvent.dayOfWeek = dt.dayOfWeek;
+                    }
+                } else if (cleanPropName === 'RRULE') {
+                    const bydayMatch = propValue.match(/BYDAY=([A-Z]{2})/i);
+                    if (bydayMatch && !currentEvent.dayOfWeek) {
+                        currentEvent.dayOfWeek = icsDayToNumber(bydayMatch[1]);
+                    }
+                }
+            }
+        }
+
+        const colorPalette = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#ec4899', '#06b6d4', '#f97316',
+            '#6366f1', '#14b8a6'
+        ];
+        const results = events.map((ev, idx) => ({
+            title: ev.summary || '未命名课程',
+            dayOfWeek: ev.dayOfWeek,
+            startTime: ev.startTime,
+            endTime: ev.endTime,
+            location: ev.location || '',
+            color: colorPalette[idx % colorPalette.length],
+            isAiGenerated: false,
+        }));
+
+        pendingImportCourses = results;
+    }
+
+    /** 解析 ICS 时间字符串 */
+    function parseICSTime(value, params) {
+        // 格式可能是：20260223T080000 或 20260223T080000Z
+        const match = value.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z?$/);
+        if (match) {
+            const year = parseInt(match[1]);
+            const month = parseInt(match[2]) - 1;
+            const day = parseInt(match[3]);
+            const hours = String(parseInt(match[4])).padStart(2, '0');
+            const minutes = match[5];
+            const date = new Date(year, month, day);
+            const rawDay = date.getDay();
+            const dayOfWeek = rawDay === 0 ? 7 : rawDay;
+            return { timeStr: `${hours}:${minutes}`, dayOfWeek };
+        }
+        return null;
+    }
+
+    /** ICS 星期缩写转数字 */
+    function icsDayToNumber(abbr) {
+        const map = { 'MO': 1, 'TU': 2, 'WE': 3, 'TH': 4, 'FR': 5, 'SA': 6, 'SU': 7 };
+        return map[abbr.toUpperCase()] || null;
+    }
+
+    /** 解析 CSV 文件 */
+    async function parseCSVFile(file) {
+        const text = await file.text();
+        const lines = text.split(/\r?\n/).filter(l => l.trim());
+        if (lines.length < 2) {
+            throw new Error('CSV 文件数据不足');
+        }
+
+        // 解析表头
+        const headers = parseCSVLine(lines[0]);
+        const columnMap = {};
+        headers.forEach((h, i) => {
+            const type = identifyColumnType(h);
+            if (type) {
+                columnMap[type] = columnMap[type] || [];
+                columnMap[type].push(i);
+            }
+        });
+
+        const getColIdx = (type) => {
+            if (columnMap[type] && columnMap[type].length > 0) return columnMap[type][0];
+            return null;
+        };
+
+        const titleIdx = getColIdx('title');
+        const dayIdx = getColIdx('dayOfWeek');
+        const timeIdx = getColIdx('time');
+        const locationIdx = getColIdx('location');
+        const teacherIdx = getColIdx('teacher');
+        const startTimeIdx = getColIdx('startTime');
+        const endTimeIdx = getColIdx('endTime');
+
+        const results = [];
+        const colorPalette = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#ec4899', '#06b6d4', '#f97316',
+            '#6366f1', '#14b8a6'
+        ];
+        let colorIdx = 0;
+
+        for (let i = 1; i < lines.length; i++) {
+            const cols = parseCSVLine(lines[i]);
+            const title = titleIdx !== null ? (cols[titleIdx] || '').trim() : '';
+            if (!title) continue;
+
+            let dayOfWeek = null;
+            if (dayIdx !== null) {
+                dayOfWeek = parseDayOfWeek(String(cols[dayIdx] || ''));
+            }
+
+            let startTime = null;
+            let endTime = null;
+
+            if (startTimeIdx !== null && endTimeIdx !== null) {
+                const st = String(cols[startTimeIdx] || '').trim();
+                const et = String(cols[endTimeIdx] || '').trim();
+                const timeResult = parseTimeRangeString(`${st}-${et}`);
+                if (timeResult) {
+                    startTime = timeResult.startTime;
+                    endTime = timeResult.endTime;
+                }
+            }
+
+            if (!startTime && timeIdx !== null) {
+                const timeVal = String(cols[timeIdx] || '').trim();
+                const timeResult = parseTimeColumn(timeVal);
+                if (timeResult) {
+                    startTime = timeResult.startTime;
+                    endTime = timeResult.endTime;
+                }
+            }
+
+            if (!startTime || !endTime) continue;
+            if (!dayOfWeek) continue;
+
+            let location = locationIdx !== null ? String(cols[locationIdx] || '').trim() : '';
+            const teacher = teacherIdx !== null ? String(cols[teacherIdx] || '').trim() : '';
+            if (teacher && !location) {
+                location = teacher;
+            } else if (teacher && location) {
+                location = `${location} (${teacher})`;
+            }
+
+            results.push({
+                title,
+                dayOfWeek,
+                startTime,
+                endTime,
+                location,
+                color: colorPalette[colorIdx % colorPalette.length],
+                isAiGenerated: false,
+            });
+            colorIdx++;
+        }
+
+        pendingImportCourses = results;
+    }
+
+    /** 解析 CSV 行 */
+    function parseCSVLine(line) {
+        const result = [];
+        let current = '';
+        let inQuotes = false;
+        for (const char of line) {
+            if (char === '"') {
+                inQuotes = !inQuotes;
+            } else if (char === ',' && !inQuotes) {
+                result.push(current);
+                current = '';
+            } else {
+                current += char;
+            }
+        }
+        result.push(current);
+        return result;
+    }
+
+    // ==================== 导入预览弹窗 ====================
+    function showImportPreview() {
+        const panel = document.getElementById('importPreviewPanel');
+        const tbody = document.getElementById('previewTableBody');
+        const countBadge = document.getElementById('importCountBadge');
+        const infoText = document.getElementById('importInfoText');
+
+        panel.classList.remove('hidden');
+        panel.classList.add('animate-slide-down');
+        countBadge.textContent = `${pendingImportCourses.length} 条记录`;
+        infoText.textContent = `来源文件：${importSourceFileName} | 当前课表已有 ${courses.length} 条记录`;
+
+        const dayNames = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+        tbody.innerHTML = '';
+
+        pendingImportCourses.forEach((c, idx) => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+            <td class="text-slate-400 text-[10px]">${idx + 1}</td>
+            <td class="font-bold text-[11px]">${escapeHTML(c.title)}</td>
+            <td>${dayNames[c.dayOfWeek] || '未知'}</td>
+            <td class="font-mono text-[10px]">${c.startTime}</td>
+            <td class="font-mono text-[10px]">${c.endTime}</td>
+            <td class="text-[10px] text-slate-500">${escapeHTML(c.location || '-')}</td>
+          `;
+            tbody.appendChild(tr);
+        });
+
+        lucide.createIcons();
+    }
+
+    function closeImportPreview() {
+        document.getElementById('importPreviewPanel').classList.add('hidden');
+        pendingImportCourses = [];
+        importSourceFileName = '';
+    }
+
+    function confirmImport() {
+        const modeRadio = document.querySelector('input[name="importMode"]:checked');
+        const mode = modeRadio ? modeRadio.value : 'merge';
+
+        if (mode === 'replace') {
+            courses = [];
+        }
+
+        // 为导入的课程生成唯一 ID
+        const importedCourses = pendingImportCourses.map(c => ({
+            ...c,
+            id: 'imp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
+        }));
+
+        courses = [...courses, ...importedCourses];
+        renderCoursesList();
+        persistCourses();
+        showToast(`成功导入 ${importedCourses.length} 条课程记录！`, 'success');
+        triggerSuccessConfetti();
+
+        closeImportPreview();
+    }
+
+    function escapeHTML(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+    }
+
+    // ==================== 导出功能 ====================
+    function exportAsJSON() {
+        if (courses.length === 0) {
+            showToast('课表为空，无法导出', 'error');
+            return;
+        }
+        const exportData = {
+            version: '8.0',
+            exportDate: new Date().toISOString(),
+            semesterStart: SEMESTER_START.toISOString().split('T')[0],
+            courseCount: courses.length,
+            courses: courses.map(c => ({
+                title: c.title,
+                dayOfWeek: c.dayOfWeek,
+                startTime: c.startTime,
+                endTime: c.endTime,
+                location: c.location || '',
+                color: c.color,
+                isAiGenerated: c.isAiGenerated || false,
+            })),
+        };
+
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+        downloadBlob(blob, `课表备份_${formatDateForFile(new Date())}.json`);
+        showToast('课表已导出为 JSON 文件', 'success');
+    }
+
+    function exportAsICS() {
+        if (courses.length === 0) {
+            showToast('课表为空，无法导出', 'error');
+            return;
+        }
+
+        const monday = new Date(currentMonday);
+        let icsContent = [
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            'PRODID:-//AI智能科研排程舱//WeekUp Style//CN',
+            'CALSCALE:GREGORIAN',
+            'METHOD:PUBLISH',
+            'X-WR-CALNAME:AI智能科研排程舱 - 课表',
+            'X-WR-TIMEZONE:Asia/Shanghai',
+        ];
+
+        courses.forEach(c => {
+            const eventDate = new Date(monday);
+            eventDate.setDate(monday.getDate() + c.dayOfWeek - 1);
+            const dateStr = formatICSDate(eventDate);
+            const startHour = c.startTime.split(':')[0];
+            const startMin = c.startTime.split(':')[1];
+            const endHour = c.endTime.split(':')[0];
+            const endMin = c.endTime.split(':')[1];
+
+            const dtStart = `${dateStr}T${startHour}${startMin}00`;
+            const dtEnd = `${dateStr}T${endHour}${endMin}00`;
+            const uid = `course-${c.id}-${Date.now()}@ai-planner`;
+
+            const dayAbbrs = ['', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
+            const rrule = `FREQ=WEEKLY;BYDAY=${dayAbbrs[c.dayOfWeek] || 'MO'}`;
+
+            icsContent.push('BEGIN:VEVENT');
+            icsContent.push(`UID:${uid}`);
+            icsContent.push(`DTSTART:${dtStart}`);
+            icsContent.push(`DTEND:${dtEnd}`);
+            icsContent.push(`RRULE:${rrule}`);
+            icsContent.push(`SUMMARY:${escapeICSText(c.title)}`);
+            if (c.location) {
+                icsContent.push(`LOCATION:${escapeICSText(c.location)}`);
+            }
+            icsContent.push('END:VEVENT');
+        });
+
+        icsContent.push('END:VCALENDAR');
+
+        const blob = new Blob([icsContent.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
+        downloadBlob(blob, `课表_${formatDateForFile(new Date())}.ics`);
+        showToast('课表已导出为 ICS (iCalendar) 文件', 'success');
+    }
+
+    function formatICSDate(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}${m}${d}`;
+    }
+
+    function escapeICSText(text) {
+        return text.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
+    }
+
+    function formatDateForFile(date) {
+        const y = date.getFullYear();
+        const m = String(date.getMonth() + 1).padStart(2, '0');
+        const d = String(date.getDate()).padStart(2, '0');
+        return `${y}${m}${d}`;
+    }
+
+    function downloadBlob(blob, filename) {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = filename;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
     }
 
     // ==================== API 配置 ====================
@@ -515,13 +1404,10 @@
     }
 
     // ==================== 周选择器逻辑 ====================
-    /** 填充周选择器下拉选项（仿 WeekUp 风格） */
     function populateWeekSelector() {
         const selector = document.getElementById('weekSelector');
-        // 保留第一个提示选项
         selector.innerHTML = '<option value="">请选择周</option>';
 
-        // 从学期起始日期开始，生成 24 周的选项
         const totalWeeks = 24;
         for (let i = 0; i < totalWeeks; i++) {
             const weekMonday = new Date(SEMESTER_START);
@@ -534,11 +1420,10 @@
             const sundayStr = formatDateShort(weekSunday);
 
             const option = document.createElement('option');
-            option.value = weekMonday.toISOString().split('T')[0]; // 如 "2026-02-23"
+            option.value = weekMonday.toISOString().split('T')[0];
             option.textContent = `第${weekNum}周 (${mondayStr} - ${sundayStr})`;
             option.className = 'week-selector-option';
 
-            // 高亮当前周
             if (isSameDay(weekMonday, currentMonday)) {
                 option.selected = true;
                 option.className += ' current-week';
@@ -547,21 +1432,19 @@
             selector.appendChild(option);
         }
 
-        // 也添加一个"本周"快捷选项
         const thisMonday = new Date(currentMonday);
         const foundOption = selector.querySelector(`option[value="${thisMonday.toISOString().split('T')[0]}"]`);
         if (!foundOption) {
-            // 当前周一不在学期范围内，添加一个额外选项
             const opt = document.createElement('option');
             opt.value = thisMonday.toISOString().split('T')[0];
-            opt.textContent = `本周 (${formatDateShort(thisMonday)} - ${formatDateShort(new Date(thisMonday.getTime() + 6 * 86400000))})`;
+            opt.textContent =
+                `本周 (${formatDateShort(thisMonday)} - ${formatDateShort(new Date(thisMonday.getTime() + 6 * 86400000))})`;
             opt.selected = true;
             opt.className = 'week-selector-option current-week';
             selector.appendChild(opt);
         }
     }
 
-    /** 跳转到指定周 */
     function goToWeek(mondayStr) {
         if (!mondayStr || !calendarInstance) return;
 
@@ -571,21 +1454,15 @@
         currentMonday = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
         currentMonday.setHours(0, 0, 0, 0);
 
-        // 刷新日历事件
         refreshCalendarEvents();
-        // 导航日历视图到该周
         calendarInstance.gotoDate(currentMonday);
-        // 更新标签
         updateCurrentWeekLabel();
-        // 更新周选择器的选中状态
         updateWeekSelectorSelection();
-        // 重新渲染课程列表（保持同步）
         renderCoursesList();
 
         showToast(`已切换至第${getWeekNumber(currentMonday)}周`, 'success');
     }
 
-    /** 跳转到今天所在周 */
     function jumpToTodayWeek() {
         const today = new Date();
         const dayOfWeek = today.getDay();
@@ -603,13 +1480,11 @@
         showToast('已回到本周', 'success');
     }
 
-    /** 获取当前周在学期中的周次 */
     function getWeekNumber(monday) {
         const diffDays = Math.round((monday.getTime() - SEMESTER_START.getTime()) / 86400000);
         return Math.floor(diffDays / 7) + 1;
     }
 
-    /** 更新周选择器的选中状态 */
     function updateWeekSelectorSelection() {
         const selector = document.getElementById('weekSelector');
         const targetValue = currentMonday.toISOString().split('T')[0];
@@ -626,7 +1501,6 @@
         }
     }
 
-    /** 更新当前周标签 */
     function updateCurrentWeekLabel() {
         const label = document.getElementById('currentWeekLabel');
         const weekNum = getWeekNumber(currentMonday);
@@ -636,14 +1510,12 @@
         label.classList.remove('hidden');
     }
 
-    /** 格式化日期为 MM/DD */
     function formatDateShort(date) {
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
         return `${month}/${day}`;
     }
 
-    /** 判断两个日期是否为同一天 */
     function isSameDay(d1, d2) {
         return d1.getFullYear() === d2.getFullYear() &&
             d1.getMonth() === d2.getMonth() &&
@@ -691,20 +1563,16 @@
             height: '100%',
             expandRows: true,
 
-            // 框选创建
             select: function(info) {
                 openAddCourseForm(null, info.start, info.end);
                 calendarInstance.unselect();
             },
-            // 点击事件 → 编辑
             eventClick: function(info) {
                 openAddCourseForm(info.event.id);
             },
-            // 拖拽移动
             eventDrop: function(info) {
                 handleSync(info.event);
             },
-            // 拖拽伸缩
             eventResize: function(info) {
                 handleSync(info.event);
             },
@@ -727,7 +1595,6 @@
         calendarInstance.render();
     }
 
-    /** 将课程数据映射为 FullCalendar 事件 */
     function getMappedEvents() {
         if (!currentMonday) initCurrentMonday();
         const monday = new Date(currentMonday);
@@ -761,16 +1628,14 @@
         });
     }
 
-    /** 刷新日历事件（不重新渲染整个日历） */
     function refreshCalendarEvents() {
         if (!calendarInstance) return;
         calendarInstance.removeAllEvents();
         calendarInstance.addEventSource(getMappedEvents());
     }
 
-    /** 处理拖拽/伸缩同步 */
     function handleSync(fcEvent) {
-        const rawDay = fcEvent.start.getDay(); // 0=周日
+        const rawDay = fcEvent.start.getDay();
         const dayOfWeek = rawDay === 0 ? 7 : rawDay;
         const pad = v => String(v).padStart(2, '0');
         const startTime = `${pad(fcEvent.start.getHours())}:${pad(fcEvent.start.getMinutes())}`;
@@ -795,7 +1660,6 @@
         const pad = v => String(v).padStart(2, '0');
 
         if (id) {
-            // 编辑模式
             const c = courses.find(x => x.id === id);
             if (c) {
                 document.getElementById('newTitle').value = c.title;
@@ -809,7 +1673,6 @@
                 modalTitle.textContent = '编辑数据节点';
             }
         } else {
-            // 新建模式
             document.getElementById('newTitle').value = '';
             document.getElementById('newLocation').value = '';
             document.getElementById('newColor').value = '#4f46e5';
@@ -845,7 +1708,6 @@
         const location = document.getElementById('newLocation').value.trim();
         const color = document.getElementById('newColor').value;
 
-        // 验证
         if (!title) {
             showToast('请填写事件名称', 'error');
             return;
@@ -866,11 +1728,9 @@
         };
 
         if (editId) {
-            // 更新
             courses = courses.map(c => c.id === editId ? { ...c, ...data, id: editId } : c);
             showToast('日程已更新', 'success');
         } else {
-            // 新建
             const newId = 'node_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
             courses.push({ ...data, id: newId });
             showToast('新日程已创建', 'success');
@@ -927,7 +1787,6 @@
             countEl.textContent = '(0)';
         } else {
             countEl.textContent = `(${courses.length})`;
-            // 按 dayOfWeek 排序
             const sorted = [...courses].sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b
                 .startTime));
             sorted.forEach(c => {
@@ -935,6 +1794,9 @@
                 const dayName = dayNames[c.dayOfWeek] || '未知';
                 const aiTag = c.isAiGenerated ?
                     '<span class="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold ml-1">AI</span>' :
+                    '';
+                const importTag = c.id && c.id.startsWith('imp_') ?
+                    '<span class="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold ml-1">导入</span>' :
                     '';
 
                 const div = document.createElement('div');
@@ -944,7 +1806,7 @@
             <div class="flex items-center gap-2.5 truncate flex-1 min-w-0">
               <div class="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm" style="background-color:${c.color}"></div>
               <div class="truncate min-w-0 flex-1">
-                <p class="text-[11px] font-bold text-slate-700 truncate flex items-center gap-1">${c.title}${aiTag}</p>
+                <p class="text-[11px] font-bold text-slate-700 truncate flex items-center gap-1">${c.title}${aiTag}${importTag}</p>
                 <p class="text-[9px] text-slate-400 font-mono">${dayName} · ${c.startTime}-${c.endTime}${c.location ? ' · ' + c.location : ''}</p>
               </div>
             </div>
@@ -956,14 +1818,12 @@
                 <i data-lucide="trash-2" class="w-3 h-3"></i>
               </button>
             </div>`;
-                // 点击整行也可以编辑
                 div.addEventListener('click', () => openAddCourseForm(c.id));
                 ctn.appendChild(div);
             });
             lucide.createIcons();
         }
 
-        // 刷新日历
         refreshCalendarEvents();
     }
 
@@ -986,13 +1846,11 @@
             '<i data-lucide="loader-2" class="w-4 h-4 animate-spin inline-block mr-2"></i> 推理计算中...';
         lucide.createIcons();
 
-        // 如果没有配置 API Key，使用演示模式
         if (!config.key || !config.baseUrl) {
             await simulateDemoPlanning(goal, btn, btnText);
             return;
         }
 
-        // 构建增强版 CoT Prompt
         const systemPrompt = buildAiSystemPrompt(goal);
 
         try {
@@ -1034,9 +1892,7 @@
         }
     }
 
-    /** 构建 AI 系统提示词 */
     function buildAiSystemPrompt(userGoal) {
-        // 分析现有课程，生成空闲时段摘要
         const freeSlotsSummary = analyzeFreeSlots();
 
         return `你是精通时间统筹与学术排程的专家 AI。你的任务是根据用户需求，在现有课程表的空余时段中安排新任务。
@@ -1079,7 +1935,6 @@
     若用户需求无法在当前课表中安排（时间完全被占满），请在 reasoning 中说明，并将 plans 设为空数组 []，在 message 中给出建议。`;
     }
 
-    /** 分析现有课程的空闲时段 */
     function analyzeFreeSlots() {
         const dayNames = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
         let summary = '';
@@ -1092,7 +1947,6 @@
             } else {
                 const busySlots = dayCourses.map(c => `${c.startTime}-${c.endTime}(${c.title})`).join(', ');
                 summary += `${dayNames[d]}: 已占用时段=[${busySlots}]`;
-                // 计算空闲
                 const freeGaps = [];
                 let cursor = '08:00';
                 for (const c of dayCourses) {
@@ -1107,9 +1961,7 @@
         return summary;
     }
 
-    /** 处理 AI 返回的响应 */
     function processAiResponse(rawContent, userGoal) {
-        // 尝试提取 JSON
         let jsonStr = rawContent;
         const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
         if (jsonMatch) {
@@ -1129,13 +1981,13 @@
             throw new Error('AI 响应缺少 plans 数组');
         }
 
-        // 显示思考链
         const thinkingBox = document.getElementById('thinkingBox');
         const thinkingContent = document.getElementById('thinkingContent');
         thinkingBox.classList.remove('hidden');
         thinkingBox.classList.add('animate-slide-down');
 
-        let outputHTML = `<div class="mb-3"><span class="text-indigo-600 font-bold block mb-1">🧠 【思考推演链】</span><span class="opacity-85 text-[11px] leading-relaxed">${parsed.reasoning || '（AI 未提供详细推演过程）'}</span></div>`;
+        let outputHTML =
+            `<div class="mb-3"><span class="text-indigo-600 font-bold block mb-1">🧠 【思考推演链】</span><span class="opacity-85 text-[11px] leading-relaxed">${parsed.reasoning || '（AI 未提供详细推演过程）'}</span></div>`;
         outputHTML +=
             `<div class="mb-3"><span class="text-emerald-600 font-bold block mb-1">💬 【助理结论】</span><span class="text-[11px] leading-relaxed">${parsed.message || '已为您安排以下任务'}</span></div>`;
 
@@ -1144,19 +1996,16 @@
                 `<div><span class="text-amber-600 font-bold block mb-1">📋 【新增计划】</span><span class="text-[11px]">共 ${parsed.plans.length} 个任务切片已添加至课表</span></div>`;
         } else {
             outputHTML +=
-            `<div><span class="text-rose-600 font-bold block mb-1">⚠️ 【无法安排】</span><span class="text-[11px]">当前课表空余时段不足以满足需求，请调整时间偏好或减少任务时长。</span></div>`;
+                `<div><span class="text-rose-600 font-bold block mb-1">⚠️ 【无法安排】</span><span class="text-[11px]">当前课表空余时段不足以满足需求，请调整时间偏好或减少任务时长。</span></div>`;
         }
         thinkingContent.innerHTML = outputHTML;
 
-        // 将计划添加到课程列表
         const newPlans = parsed.plans || [];
         let addedCount = 0;
         newPlans.forEach(p => {
-            // 基本验证
             if (!p.title || !p.dayOfWeek || !p.startTime || !p.endTime) return;
             if (p.dayOfWeek < 1 || p.dayOfWeek > 7) return;
             if (p.startTime >= p.endTime) return;
-            // 检查是否在睡眠禁区
             if (p.startTime < '08:00' && p.endTime <= '08:00') return;
             if (p.startTime >= '23:00') return;
 
@@ -1182,9 +2031,7 @@
         }
     }
 
-    /** 演示模式（无 API Key 时的模拟） */
     async function simulateDemoPlanning(goal, btn, btnText) {
-        // 模拟延迟
         await new Promise(r => setTimeout(r, 1200));
 
         const thinkingBox = document.getElementById('thinkingBox');
@@ -1204,7 +2051,6 @@
       <div class="mb-3"><span class="text-emerald-600 font-bold block mb-1">💬 【助理结论】</span><span class="text-[11px] leading-relaxed">这是演示模式下的模拟排程。请配置 API Key 以获得真实的 AI 推理排程。</span></div>
     `;
 
-        // 添加一个演示任务
         const demoPlan = {
             id: 'demo_' + Date.now(),
             title: '📋 模拟排程任务',
@@ -1248,7 +2094,8 @@
             `toast-notification fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-5 py-3 rounded-full shadow-xl text-white font-bold text-xs flex items-center gap-2 transition-all duration-300 -translate-y-12 opacity-0 ${
         type === 'success' ? 'bg-slate-900' : 'bg-rose-600'
       }`;
-        t.innerHTML = `<i data-lucide="${type === 'success' ? 'check-circle-2' : 'alert-circle'}" class="w-4 h-4"></i><span>${msg}</span>`;
+        t.innerHTML =
+            `<i data-lucide="${type === 'success' ? 'check-circle-2' : 'alert-circle'}" class="w-4 h-4"></i><span>${msg}</span>`;
         document.body.appendChild(t);
         lucide.createIcons();
 
@@ -1281,23 +2128,28 @@
 
     // ==================== 键盘快捷键 ====================
     document.addEventListener('keydown', function(e) {
-        // Esc 关闭弹窗
         if (e.key === 'Escape') {
             const panel = document.getElementById('addCoursePanel');
             if (!panel.classList.contains('hidden')) {
                 closeAddCourseForm();
             }
+            const importPanel = document.getElementById('importPreviewPanel');
+            if (!importPanel.classList.contains('hidden')) {
+                closeImportPreview();
+            }
             const apiPanel = document.getElementById('apiPanel');
             if (!apiPanel.classList.contains('hidden') && e.target.tagName !== 'INPUT') {
                 toggleApiSettings();
             }
+            const menu = document.getElementById('importExportMenu');
+            if (menu && !menu.classList.contains('hidden')) {
+                menu.classList.add('hidden');
+            }
         }
-        // Ctrl+N 新建课程
         if (e.ctrlKey && e.key === 'n') {
             e.preventDefault();
             openAddCourseForm();
         }
-        // Ctrl+T 回到本周
         if (e.ctrlKey && e.key === 't') {
             e.preventDefault();
             jumpToTodayWeek();
