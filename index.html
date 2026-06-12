@@ -1557,14 +1557,13 @@
             const weekSunday = new Date(weekMonday);
             weekSunday.setDate(weekMonday.getDate() + 6);
             const weekNum = i + 1;
-            const month = weekMonday.getMonth() + 1; // 1-based
+            const month = weekMonday.getMonth() + 1;
             if (month !== currentMonth) {
                 currentMonth = month;
                 const optgroup = document.createElement('optgroup');
                 optgroup.label = `── ${monthNames[month] || month + '月'} ──`;
                 selector.appendChild(optgroup);
             }
-            // 统计该周有多少课程
             const courseCount = courses.filter(c => courseActiveInWeek(c, weekNum)).length;
             const countStr = courseCount > 0 ? ` [${courseCount}门]` : '';
             const mondayStr = formatDateShort(weekMonday), sundayStr = formatDateShort(weekSunday);
@@ -1575,6 +1574,38 @@
             if (isSameDay(weekMonday, currentMonday)) { option.selected = true; option.className += ' current-week'; }
             selector.appendChild(option);
         }
+    }
+
+    /** 仅刷新下拉菜单中各周的课程数量文字，不重建整个列表 */
+    function refreshWeekCourseCounts() {
+        const selector = document.getElementById('weekSelector');
+        if (!selector) return;
+        // 保存当前选中值
+        const savedValue = selector.value;
+        const weekMondays = [];
+        for (let i = 0; i < TOTAL_WEEKS; i++) {
+            const m = new Date(SEMESTER_START);
+            m.setDate(SEMESTER_START.getDate() + i * 7);
+            weekMondays.push(m);
+        }
+        // 遍历所有 option 更新文字
+        const options = selector.querySelectorAll('option');
+        let idx = 0; // 跳过第一个 "快速跳转" option
+        options.forEach(opt => {
+            if (idx === 0) { idx++; return; } // 跳过占位项
+            if (idx > TOTAL_WEEKS) return;
+            const weekMonday = weekMondays[idx - 1];
+            const weekNum = idx;
+            const weekSunday = new Date(weekMonday);
+            weekSunday.setDate(weekMonday.getDate() + 6);
+            const courseCount = courses.filter(c => courseActiveInWeek(c, weekNum)).length;
+            const countStr = courseCount > 0 ? ` [${courseCount}门]` : '';
+            const mondayStr = formatDateShort(weekMonday), sundayStr = formatDateShort(weekSunday);
+            opt.textContent = `第${weekNum}周 ${mondayStr}-${sundayStr}${countStr}`;
+            idx++;
+        });
+        // 恢复选中值
+        if (savedValue) selector.value = savedValue;
     }
 
     function goToWeek(mondayStr) {
@@ -1994,6 +2025,7 @@
             lucide.createIcons();
         }
         refreshCalendarEvents();
+        refreshWeekCourseCounts();
     }
 
     function renderCourseCard(c, ctn, weekNum) {
