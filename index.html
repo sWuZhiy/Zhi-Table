@@ -463,24 +463,35 @@
 </div>
 
 <div class="lg:col-span-8 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[700px] lg:h-[800px]">
-    <div class="flex items-center justify-between gap-4 mb-4 flex-wrap">
-        <div class="flex items-center gap-3">
-            <div class="flex items-center gap-1.5">
-                <i data-lucide="calendar-range" class="w-4 h-4 text-indigo-500"></i>
-                <span class="text-[11px] font-bold text-slate-700">教学周选择</span>
-            </div>
-            <select id="weekSelector" onchange="goToWeek(this.value)"
-            class="text-xs rounded-xl border border-slate-200 bg-slate-50 p-2.5 pr-8 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 min-w-[200px] cursor-pointer transition-all appearance-none"
-        style="background-image: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23475569%22 stroke-width=%222%22%3E%3Cpath d=%22M6 9l6 6 6-6%22/%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 10px center;">
-        <option value="">请选择周</option>
-    </select>
+    <div class="flex items-center justify-between gap-3 mb-4 flex-wrap">
+        <div class="flex items-center gap-2">
+            <i data-lucide="calendar-range" class="w-4 h-4 text-indigo-500 flex-shrink-0"></i>
+            <button onclick="goToPrevNextWeek(-1)" class="p-1.5 rounded-lg bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-500 transition-all flex-shrink-0" title="上一周">
+                <i data-lucide="chevron-left" class="w-3.5 h-3.5"></i>
+            </button>
+            <div class="relative">
+                <select id="weekSelector" onchange="goToWeek(this.value)"
+                class="text-xs rounded-xl border border-slate-200 bg-slate-50 p-2.5 pr-8 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 min-w-[180px] cursor-pointer transition-all appearance-none"
+            style="background-image: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23475569%22 stroke-width=%222%22%3E%3Cpath d=%22M6 9l6 6 6-6%22/%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 10px center;">
+            <option value="">请选择周</option>
+        </select>
+    </div>
+    <button onclick="goToPrevNextWeek(1)" class="p-1.5 rounded-lg bg-slate-100 hover:bg-indigo-50 hover:text-indigo-600 text-slate-500 transition-all flex-shrink-0" title="下一周">
+        <i data-lucide="chevron-right" class="w-3.5 h-3.5"></i>
+    </button>
+    <span id="currentWeekLabel" class="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1.5 rounded-lg hidden"></span>
 </div>
-<div class="flex items-center gap-2">
+<div class="flex items-center gap-3">
     <button onclick="jumpToTodayWeek()"
-    class="text-[10px] font-bold px-3 py-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-all flex items-center gap-1 border border-indigo-100">
-    <i data-lucide="calendar" class="w-3 h-3"></i> 回到本周
+    class="text-[10px] font-bold px-3 py-2 rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-all flex items-center gap-1 border border-indigo-100 flex-shrink-0">
+    <i data-lucide="calendar" class="w-3 h-3"></i> 本周
 </button>
-<span id="currentWeekLabel" class="text-[10px] text-slate-400 hidden"></span>
+<div class="flex items-center gap-2 flex-1 min-w-[100px]">
+    <div class="h-1.5 bg-slate-100 rounded-full flex-1 overflow-hidden">
+        <div id="semesterProgressBar" class="h-full bg-indigo-500 rounded-full transition-all duration-300" style="width:0%"></div>
+    </div>
+    <span id="semesterProgressText" class="text-[9px] text-slate-400 font-mono whitespace-nowrap"></span>
+</div>
 </div>
 </div>
 <div id="calendar" class="w-full h-full"></div>
@@ -821,6 +832,7 @@
         renderCoursesList();
         checkNetworkStatusDisplay();
         updateCurrentWeekLabel();
+        updateSemesterProgress();
         document.addEventListener('click', function(e) {
             const dropdown = document.getElementById('importExportDropdown');
             const menu = document.getElementById('importExportMenu');
@@ -1359,32 +1371,33 @@
     // ==================== 周选择器逻辑 ====================
     function populateWeekSelector() {
         const selector = document.getElementById('weekSelector');
-        selector.innerHTML = '<option value="">请选择周</option>';
+        selector.innerHTML = '<option value="">📅 快速跳转...</option>';
+        const monthNames = ['', '2月', '3月', '4月', '5月', '6月', '7月', '8月'];
+        let currentMonth = 0;
         for (let i = 0; i < TOTAL_WEEKS; i++) {
             const weekMonday = new Date(SEMESTER_START);
             weekMonday.setDate(SEMESTER_START.getDate() + i * 7);
             const weekSunday = new Date(weekMonday);
             weekSunday.setDate(weekMonday.getDate() + 6);
             const weekNum = i + 1;
-            const mondayStr = formatDateShort(weekMonday),
-                sundayStr = formatDateShort(weekSunday);
+            const month = weekMonday.getMonth() + 1; // 1-based
+            if (month !== currentMonth) {
+                currentMonth = month;
+                const optgroup = document.createElement('optgroup');
+                optgroup.label = `── ${monthNames[month] || month + '月'} ──`;
+                selector.appendChild(optgroup);
+            }
+            // 统计该周有多少课程
+            const courseCount = courses.filter(c => courseActiveInWeek(c, weekNum)).length;
+            const countStr = courseCount > 0 ? ` [${courseCount}门]` : '';
+            const mondayStr = formatDateShort(weekMonday), sundayStr = formatDateShort(weekSunday);
             const option = document.createElement('option');
             option.value = weekMonday.toISOString().split('T')[0];
-            option.textContent = `第${weekNum}周 (${mondayStr} - ${sundayStr})`;
+            option.textContent = `第${weekNum}周 ${mondayStr}-${sundayStr}${countStr}`;
             option.className = 'week-selector-option';
-            if (isSameDay(weekMonday, currentMonday)) { option.selected = true;
-                option.className += ' current-week'; }
+            if (isSameDay(weekMonday, currentMonday)) { option.selected = true; option.className += ' current-week'; }
             selector.appendChild(option);
         }
-        const thisMonday = new Date(currentMonday);
-        const foundOption = selector.querySelector(`option[value="${thisMonday.toISOString().split('T')[0]}"]`);
-        if (!foundOption) { const opt = document.createElement('option');
-            opt.value = thisMonday.toISOString().split('T')[0];
-            opt.textContent =
-                `本周 (${formatDateShort(thisMonday)} - ${formatDateShort(new Date(thisMonday.getTime() + 6*86400000))})`;
-            opt.selected = true;
-            opt.className = 'week-selector-option current-week';
-            selector.appendChild(opt); }
     }
 
     function goToWeek(mondayStr) {
@@ -1396,9 +1409,30 @@
         refreshCalendarEvents();
         calendarInstance.gotoDate(currentMonday);
         updateCurrentWeekLabel();
-        updateWeekSelectorSelection();
+        updateSemesterProgress();
         renderCoursesList();
         showToast(`已切换至第${getWeekNumber(currentMonday)}周`, 'success');
+    }
+
+    function goToPrevNextWeek(delta) {
+        if (!calendarInstance) return;
+        const newMonday = new Date(currentMonday);
+        newMonday.setDate(newMonday.getDate() + delta * 7);
+        // 限制在学期范围内
+        const firstMonday = new Date(SEMESTER_START);
+        const lastMonday = new Date(SEMESTER_START);
+        lastMonday.setDate(SEMESTER_START.getDate() + (TOTAL_WEEKS - 1) * 7);
+        if (newMonday < firstMonday) { showToast('已是学期第一周', 'error'); return; }
+        if (newMonday > lastMonday) { showToast('已是学期最后一周', 'error'); return; }
+        currentMonday = newMonday;
+        currentMonday.setHours(0, 0, 0, 0);
+        refreshCalendarEvents();
+        calendarInstance.gotoDate(currentMonday);
+        updateCurrentWeekLabel();
+        updateSemesterProgress();
+        updateWeekSelectorSelection();
+        renderCoursesList();
+        showToast(`切换至第${getWeekNumber(currentMonday)}周`, 'success');
     }
 
     function jumpToTodayWeek() {
@@ -1412,6 +1446,7 @@
         refreshCalendarEvents();
         calendarInstance.gotoDate(currentMonday);
         updateCurrentWeekLabel();
+        updateSemesterProgress();
         updateWeekSelectorSelection();
         renderCoursesList();
         showToast('已回到本周', 'success');
@@ -1430,11 +1465,20 @@
 
     function updateCurrentWeekLabel() {
         const label = document.getElementById('currentWeekLabel');
+        if (!label) return;
         const weekNum = getWeekNumber(currentMonday);
         const sunday = new Date(currentMonday);
         sunday.setDate(currentMonday.getDate() + 6);
-        label.textContent = `当前：第${weekNum}周 | ${formatDateShort(currentMonday)} - ${formatDateShort(sunday)}`;
+        label.textContent = `第${weekNum}周`;
         label.classList.remove('hidden');
+    }
+
+    function updateSemesterProgress() {
+        const weekNum = getWeekNumber(currentMonday);
+        const progressBar = document.getElementById('semesterProgressBar');
+        const progressText = document.getElementById('semesterProgressText');
+        if (progressBar) progressBar.style.width = `${Math.round(weekNum / TOTAL_WEEKS * 100)}%`;
+        if (progressText) progressText.textContent = `${weekNum}/${TOTAL_WEEKS}周`;
     }
 
     function formatDateShort(date) { const month = String(date.getMonth() + 1).padStart(2, '0'),
@@ -2163,6 +2207,13 @@ ${freeSlotsSummary}
             openAddCourseForm(); }
         if (e.ctrlKey && e.key === 't') { e.preventDefault();
             jumpToTodayWeek(); }
+        // 左右箭头切换周（不在输入框内时）
+        if (e.key === 'ArrowLeft' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'SELECT') {
+            e.preventDefault(); goToPrevNextWeek(-1);
+        }
+        if (e.key === 'ArrowRight' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA' && e.target.tagName !== 'SELECT') {
+            e.preventDefault(); goToPrevNextWeek(1);
+        }
     });
 </script>
 </body>
