@@ -17,6 +17,8 @@
     </script>
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js">
     </script>
+    <script src="https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.min.js">
+    </script>
 
     <style>
         ::-webkit-scrollbar {
@@ -519,10 +521,41 @@
                     class="w-full p-3 text-xs border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 min-h-[90px] resize-none transition-all"
                 required></textarea>
             </div>
-            <div class="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-3 text-[10px] text-indigo-700 flex items-start gap-2">
-                <i data-lucide="info" class="w-3.5 h-3.5 flex-shrink-0 mt-0.5"></i>
-                <span>AI 会自动解析<strong>时长、优先级、偏好及周次范围</strong>，结合现有课表寻找最佳空档。支持描述如"第3-10周"、"前8周"、"全学期"等周次表达。</span>
+            <!-- PDF 上传区域 -->
+            <div class="flex flex-col gap-2">
+                <input type="file" id="pdfFileInput" accept=".pdf" class="hidden" onchange="handlePdfFile(this.files[0])">
+                <div id="pdfDropZone"
+                class="border-2 border-dashed border-slate-300 rounded-xl p-4 text-center cursor-pointer hover:border-indigo-400 hover:bg-indigo-50/30 transition-all"
+                onclick="document.getElementById('pdfFileInput').click()"
+                ondragover="event.preventDefault(); this.classList.add('border-indigo-500','bg-indigo-50')"
+                ondragleave="this.classList.remove('border-indigo-500','bg-indigo-50')"
+                ondrop="event.preventDefault(); this.classList.remove('border-indigo-500','bg-indigo-50'); handlePdfFile(event.dataTransfer.files[0])">
+                <i data-lucide="file-text" class="w-5 h-5 mx-auto mb-1 text-slate-400"></i>
+                <p class="text-[10px] text-slate-500 font-medium">上传 PDF（课表/教学大纲等）</p>
+                <p class="text-[9px] text-slate-400">拖拽到此处或点击选择 · AI 将读取内容辅助排程</p>
             </div>
+            <!-- PDF 已加载状态 -->
+            <div id="pdfLoadedBadge" class="hidden bg-emerald-50 border border-emerald-200 rounded-xl p-2.5 flex items-center gap-2">
+                <i data-lucide="file-check" class="w-4 h-4 text-emerald-600 flex-shrink-0"></i>
+                <div class="flex-1 min-w-0">
+                    <p id="pdfFileName" class="text-[10px] font-bold text-emerald-700 truncate"></p>
+                    <p id="pdfPageInfo" class="text-[9px] text-emerald-500"></p>
+                </div>
+                <button onclick="event.stopPropagation(); clearPdfContent()" class="text-rose-500 hover:bg-rose-50 p-1 rounded-lg flex-shrink-0" title="清除 PDF">
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+            <!-- PDF 解析中 -->
+            <div id="pdfLoadingBadge" class="hidden bg-amber-50 border border-amber-200 rounded-xl p-2.5 flex items-center gap-2">
+                <i data-lucide="loader-2" class="w-4 h-4 text-amber-600 animate-spin flex-shrink-0"></i>
+                <span class="text-[10px] text-amber-700 font-medium">正在解析 PDF...</span>
+            </div>
+        </div>
+
+        <div class="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-3 text-[10px] text-indigo-700 flex items-start gap-2">
+            <i data-lucide="info" class="w-3.5 h-3.5 flex-shrink-0 mt-0.5"></i>
+            <span>AI 会自动解析<strong>时长、优先级、偏好及周次范围</strong>，结合现有课表和上传的 PDF 内容寻找最佳空档。支持描述如"第3-10周"、"前8周"、"全学期"等周次表达。</span>
+        </div>
             <button type="submit" id="planBtn"
             class="w-full py-3 bg-slate-900 hover:bg-slate-800 rounded-xl text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed">
             <i data-lucide="bot" class="w-4 h-4"></i>
@@ -960,6 +993,7 @@
     let importSourceFileName = '';
     let pendingAiPlans = [];
     let aiHistory = [];
+    let pdfTextContent = ''; // 上传的 PDF 解析文本
 
     // ==================== 深色模式 ====================
     function applyDarkMode(isDark) {
@@ -2071,6 +2105,61 @@
         ctn.appendChild(div);
     }
 
+    // ==================== PDF 解析 ====================
+    // 配置 PDF.js worker
+    if (typeof pdfjsLib !== 'undefined') {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdn.jsdelivr.net/npm/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+    }
+
+    async function handlePdfFile(file) {
+        if (!file || file.type !== 'application/pdf') {
+            showToast('请上传 PDF 文件', 'error');
+            return;
+        }
+        const loadingEl = document.getElementById('pdfLoadingBadge');
+        const dropZone = document.getElementById('pdfDropZone');
+        const loadedBadge = document.getElementById('pdfLoadedBadge');
+
+        dropZone.classList.add('hidden');
+        loadingEl.classList.remove('hidden');
+        lucide.createIcons();
+
+        try {
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+            const totalPages = pdf.numPages;
+            let fullText = '';
+
+            for (let i = 1; i <= totalPages; i++) {
+                const page = await pdf.getPage(i);
+                const textContent = await page.getTextContent();
+                const pageText = textContent.items.map(item => item.str).join(' ');
+                fullText += pageText + '\n';
+            }
+
+            pdfTextContent = fullText.trim();
+            document.getElementById('pdfFileName').textContent = file.name;
+            document.getElementById('pdfPageInfo').textContent = `共 ${totalPages} 页 · ${fullText.length} 字符`;
+            loadingEl.classList.add('hidden');
+            loadedBadge.classList.remove('hidden');
+            lucide.createIcons();
+            showToast(`PDF 解析完成：${totalPages} 页内容已就绪`, 'success');
+        } catch (err) {
+            console.error('PDF 解析错误:', err);
+            loadingEl.classList.add('hidden');
+            dropZone.classList.remove('hidden');
+            showToast('PDF 解析失败：' + err.message.slice(0, 100), 'error');
+        }
+    }
+
+    function clearPdfContent() {
+        pdfTextContent = '';
+        document.getElementById('pdfLoadedBadge').classList.add('hidden');
+        document.getElementById('pdfDropZone').classList.remove('hidden');
+        document.getElementById('pdfFileInput').value = '';
+        showToast('已清除 PDF 内容', 'success');
+    }
+
     // ==================== AI 排程引擎 ====================
     async function runAiPlanner(event) {
         event.preventDefault();
@@ -2117,14 +2206,17 @@
     function buildAiSystemPrompt(userGoal) {
         const freeSlotsSummary = analyzeFreeSlots();
         const currentWeek = getCurrentWeekNumber();
-        return `你是精通时间统筹与学术排程的专家 AI。你的任务是根据用户需求，在现有课程表的空余时段中安排新任务，支持跨周排程。
+        const pdfSection = pdfTextContent
+            ? `\n【上传的 PDF 文档内容（教学大纲/课表文件）】\n${pdfTextContent.slice(0, 6000)}${pdfTextContent.length > 6000 ? '\n...(内容过长已截断)' : ''}\n`
+            : '';
+        return `你是精通时间统筹与学术排程的专家 AI。你的任务是根据用户需求，结合现有课程表和上传的文档内容，在空余时段中安排新任务，支持跨周排程。
 
 【核心数据】
 学期总周数: ${TOTAL_WEEKS}周，学期起始: 2026-02-23
-当前周: 第${currentWeek}周 (周一: ${currentMonday.toISOString().split('T')[0]})
+当前周: 第${currentWeek}周 (周一: ${formatLocalDate(currentMonday)})
 已有日程清单 (JSON):
 ${JSON.stringify(courses.map(c => ({ title: c.title, dayOfWeek: c.dayOfWeek, startTime: c.startTime, endTime: c.endTime, weeks: c.weeks || generateAllWeeks(), location: c.location })), null, 2)}
-
+${pdfSection}
 【空闲时段分析】
 ${freeSlotsSummary}
 
@@ -2139,12 +2231,12 @@ ${freeSlotsSummary}
 5. 跨周排程（重要）：解析用户周次描述——"第1-8周"→weeks:[1,2,...,8]；"前8周"→[1-8]；"第5-12周"→[5-12]；"全学期"→[1-24]；"单周/奇数周"→[1,3,5,...,23]；"双周/偶数周"→[2,4,6,...,24]。默认覆盖全部24周
 6. dayOfWeek编码：1=周一,2=周二,3=周三,4=周四,5=周五,6=周六,7=周日
 7. 合理分布：避免将长任务切得过碎，尽量安排在连续时段。若需拆分，均匀分布在一周内
-8. 颜色：不同任务使用不同颜色便于区分，建议用暖色调(#f59e0b,#ef4444,#ec4899,#f97316)标记新任务
+8. 颜色：不同任务使用不同颜色便于区分，建议用暖色调(#f59e0b,#ef4444,#ec4899,#f97316)标记新任务${pdfTextContent ? '\n9. 📄 PDF文档参考：如上传的文档中包含课程安排、考试时间、教学计划等信息，请将其作为排程依据，避免在这些时段安排新任务，并优先根据文档中的时间表来规划' : ''}
 
 【输出规范】
 返回纯JSON（无markdown标记、无额外文字）：
 {
-  "reasoning": "详细推演过程：分析空档→匹配需求→解析周次→决策依据（200-400字）",
+  "reasoning": "详细推演过程：分析空档→匹配需求${pdfTextContent ? '→参考PDF文档' : ''}→解析周次→决策依据（200-400字）",
   "message": "给用户的简洁总结（50-100字）",
   "plans": [{
     "title": "任务名称",
