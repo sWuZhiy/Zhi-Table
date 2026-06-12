@@ -1614,7 +1614,6 @@
         if (parts.length !== 3) return;
         currentMonday = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
         currentMonday.setHours(0, 0, 0, 0);
-        refreshCalendarEvents();
         calendarInstance.gotoDate(currentMonday);
         updateCurrentWeekLabel();
         updateSemesterProgress();
@@ -1635,7 +1634,6 @@
         if (newMonday > lastMonday) { showToast('已是学期最后一周', 'error'); return; }
         currentMonday = newMonday;
         currentMonday.setHours(0, 0, 0, 0);
-        refreshCalendarEvents();
         calendarInstance.gotoDate(currentMonday);
         updateCurrentWeekLabel();
         updateSemesterProgress();
@@ -1652,7 +1650,6 @@
         thisMonday.setDate(today.getDate() + diff);
         thisMonday.setHours(0, 0, 0, 0);
         currentMonday = thisMonday;
-        refreshCalendarEvents();
         calendarInstance.gotoDate(currentMonday);
         updateCurrentWeekLabel();
         updateSemesterProgress();
@@ -1756,7 +1753,6 @@
                 // 避免重复刷新（与当前周一相同时跳过）
                 if (currentMonday && isSameDay(newMonday, currentMonday)) return;
                 currentMonday = newMonday;
-                refreshCalendarEvents();
                 updateCurrentWeekLabel();
                 updateSemesterProgress();
                 updateWeekSelectorSelection();
