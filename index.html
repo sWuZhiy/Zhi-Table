@@ -599,7 +599,7 @@
 
 <div id="coursesList" class="flex flex-col gap-2.5 min-h-0 overflow-y-auto"></div>
 <div class="text-[10px] text-slate-400 mt-3 pt-2 border-t border-slate-100 text-center flex-shrink-0">
-    <i data-lucide="mouse-pointer-click" class="w-3 h-3 inline mr-1"></i> 日历上拖拽框选即可快速建课 · 点击事件可编辑或删除 · 支持跨周排程
+    <i data-lucide="mouse-pointer-click" class="w-3 h-3 inline mr-1"></i> 日历框选建课 · 点击编辑删除 · 按 <kbd class="px-1 py-0.5 bg-slate-200 rounded text-[9px] font-mono">?</kbd> 查看快捷键
 </div>
 </div>
 </div>
@@ -1709,12 +1709,15 @@
             eventContent: function(arg) {
                 const isAi = arg.event.extendedProps.isAiGenerated;
                 const loc = arg.event.extendedProps.location || '';
+                const weeks = arg.event.extendedProps.weeks;
                 const aiBadge = isAi ? '✨ ' : '';
                 const locBadge = loc ? `<div class="opacity-75 text-[8px] mt-0.5">📍 ${loc}</div>` : '';
+                const weekStr = weeks && weeks.length > 0 && weeks.length < TOTAL_WEEKS ? weeksToDisplayString(weeks) : '';
+                const weekBadge = weekStr ? `<div class="opacity-70 text-[7px] mt-0.5">📅 ${weekStr}</div>` : '';
                 return { html: `<div class="p-1.5 h-full flex flex-col justify-between text-white text-[11px] leading-snug cursor-pointer">
               <div class="font-bold truncate">${aiBadge}${arg.event.title}</div>
               <div class="opacity-85 font-mono text-[9px] mt-1">${arg.timeText}</div>
-              ${locBadge}</div>` };
+              ${locBadge}${weekBadge}</div>` };
             }
         });
         calendarInstance.render();
@@ -1827,6 +1830,19 @@
         if (startTime >= endTime) { showToast('结束时间必须晚于开始时间', 'error'); return; }
         const weeks = parseWeeksString(weeksInput);
         const data = { title, dayOfWeek, startTime, endTime, weeks, location, color, isAiGenerated: false };
+
+        // 冲突检测（排除自身编辑）
+        const conflicts = courses.filter(c =>
+            c.id !== editId &&
+            c.dayOfWeek === dayOfWeek &&
+            c.startTime < endTime && c.endTime > startTime &&
+            c.weeks.some(w => weeks.includes(w))
+        );
+        if (conflicts.length > 0) {
+            const conflictNames = conflicts.map(c => `${c.title}(${c.startTime}-${c.endTime})`).join(', ');
+            if (!confirm(`⚠️ 检测到 ${conflicts.length} 个时间冲突：\n${conflictNames}\n\n确定仍要保存吗？`)) return;
+        }
+
         if (editId) { courses = courses.map(c => c.id === editId ? { ...c, ...data, id: editId } : c);
             showToast('日程已更新', 'success'); } else { const newId = 'node_' + Date.now() + '_' + Math.random().toString(
                 36).slice(2, 6);
@@ -1840,14 +1856,50 @@
     function deleteFromModal() {
         const panel = document.getElementById('addCoursePanel');
         const editId = panel.dataset.editId;
-        if (editId) { if (confirm('确定要删除此日程事件吗？此操作不可撤销。')) { deleteCourse(editId);
-                closeAddCourseForm();
-                showToast('日程已删除', 'success'); } }
+        if (editId) { if (confirm('确定要删除此日程事件吗？')) { deleteCourse(editId);
+                closeAddCourseForm(); } }
     }
 
-    function deleteCourse(id) { courses = courses.filter(c => c.id !== id);
+    function deleteCourse(id) {
+        const course = courses.find(c => c.id === id);
+        if (!course) return;
+        courses = courses.filter(c => c.id !== id);
+        deletedCourse = course;
+        deletedCourseTimer = Date.now();
         renderCoursesList();
-        persistCourses(); }
+        persistCourses();
+        showUndoToast(`已删除"${course.title}"`, () => {
+            if (deletedCourse && deletedCourse.id === id) {
+                courses.push(deletedCourse);
+                deletedCourse = null;
+                deletedCourseTimer = 0;
+                renderCoursesList();
+                persistCourses();
+                showToast('已恢复删除', 'success');
+            }
+        });
+    }
+
+    // 撤销删除支持
+    let deletedCourse = null;
+    let deletedCourseTimer = 0;
+
+    function showUndoToast(msg, undoFn) {
+        const existingToasts = document.querySelectorAll('.toast-notification');
+        existingToasts.forEach(t => t.remove());
+        const t = document.createElement('div');
+        t.className = 'toast-notification fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-5 py-3 rounded-full shadow-xl text-white font-bold text-xs flex items-center gap-3 transition-all duration-300 -translate-y-12 opacity-0 bg-slate-900';
+        t.innerHTML = `<i data-lucide="trash-2" class="w-4 h-4"></i><span>${msg}</span><button class="ml-2 px-3 py-1 bg-white/20 rounded-full text-[9px] font-bold hover:bg-white/30 transition-all" id="undoBtn">撤销</button>`;
+        document.body.appendChild(t);
+        lucide.createIcons();
+        requestAnimationFrame(() => { t.classList.remove('-translate-y-12', 'opacity-0'); t.classList.add('translate-y-0', 'opacity-100'); });
+        const undoBtn = t.querySelector('#undoBtn');
+        if (undoBtn) undoBtn.addEventListener('click', () => { undoFn(); t.remove(); });
+        setTimeout(() => {
+            t.classList.add('-translate-y-12', 'opacity-0');
+            setTimeout(() => { t.remove(); deletedCourse = null; deletedCourseTimer = 0; }, 350);
+        }, 5000);
+    }
 
     function clearAllEvents() {
         if (courses.length === 0) { showToast('课程列表已为空', 'error'); return; }
@@ -1898,9 +1950,10 @@
         }
 
         if (!courses.length) {
-            ctn.innerHTML = `<div class="text-center py-6 text-slate-400">
-          <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-40"></i>
-          <p class="text-xs">空画布 — 在日历上拖拽框选或点击"新增"来创建第一个日程</p></div>`;
+            ctn.innerHTML = `<div class="text-center py-8 text-slate-400">
+          <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-3 opacity-40"></i>
+          <p class="text-xs font-bold mb-2">还没有课程安排</p>
+          <p class="text-[10px] leading-relaxed">💡 在日历上<strong>拖拽框选</strong>快速建课<br>📂 点击「导入/导出」导入 Excel/CSV 课表<br>🤖 使用 AI 智能排程自动生成计划<br>📋 或点击「新增」按钮手动添加</p></div>`;
             lucide.createIcons();
             countEl.textContent = '(0)';
             if (filteredEl) filteredEl.classList.add('hidden');
@@ -2368,9 +2421,24 @@ ${freeSlotsSummary}
         setTimeout(() => { confetti({ particleCount: 40, spread: 35, origin: { y: 0.8, x: 0.4 } }); }, 200);
     }
 
+    function showKeyboardHelp() {
+        const panel = document.getElementById('keyboardHelpPanel');
+        panel.classList.remove('hidden');
+        panel.classList.add('animate-slide-down');
+        lucide.createIcons();
+    }
+
     // ==================== 键盘快捷键 ====================
     document.addEventListener('keydown', function(e) {
+        // 快捷键帮助面板
+        if (e.key === '?' && e.target.tagName !== 'INPUT' && e.target.tagName !== 'TEXTAREA') {
+            e.preventDefault();
+            showKeyboardHelp();
+            return;
+        }
         if (e.key === 'Escape') {
+            const helpPanel = document.getElementById('keyboardHelpPanel');
+            if (helpPanel && !helpPanel.classList.contains('hidden')) { helpPanel.classList.add('hidden'); return; }
             const panel = document.getElementById('addCoursePanel'); if (!panel.classList.contains(
             'hidden')) closeAddCourseForm();
             const importPanel = document.getElementById('importPreviewPanel'); if (!importPanel.classList
@@ -2393,5 +2461,27 @@ ${freeSlotsSummary}
         }
     });
 </script>
+
+<!-- 键盘快捷键帮助面板 -->
+<div id="keyboardHelpPanel" class="hidden fixed inset-0 bg-slate-900/60 z-50 flex items-center justify-center backdrop-blur-sm transition-opacity">
+    <div class="bg-white p-6 rounded-2xl w-[420px] max-w-[95vw] shadow-2xl border border-slate-200 animate-slide-down">
+        <div class="flex items-center justify-between mb-4">
+            <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
+                <i data-lucide="keyboard" class="w-4 h-4 text-indigo-500"></i> 键盘快捷键
+            </h3>
+            <button onclick="document.getElementById('keyboardHelpPanel').classList.add('hidden')" class="text-slate-400 hover:text-slate-600">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+        <div class="flex flex-col gap-2 text-[11px]">
+            <div class="flex justify-between items-center py-1.5 border-b border-slate-100"><span>打开快捷键帮助</span><kbd class="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-mono">?</kbd></div>
+            <div class="flex justify-between items-center py-1.5 border-b border-slate-100"><span>关闭弹窗/面板</span><kbd class="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-mono">Esc</kbd></div>
+            <div class="flex justify-between items-center py-1.5 border-b border-slate-100"><span>新建日程</span><kbd class="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-mono">Ctrl+N</kbd></div>
+            <div class="flex justify-between items-center py-1.5 border-b border-slate-100"><span>回到本周</span><kbd class="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-mono">Ctrl+T</kbd></div>
+            <div class="flex justify-between items-center py-1.5 border-b border-slate-100"><span>上一周</span><kbd class="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-mono">←</kbd></div>
+            <div class="flex justify-between items-center py-1.5"><span>下一周</span><kbd class="px-2 py-0.5 bg-slate-100 rounded text-[10px] font-mono">→</kbd></div>
+        </div>
+    </div>
+</div>
 </body>
 </html>
