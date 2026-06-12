@@ -1745,6 +1745,23 @@
             eventClick: function(info) { openAddCourseForm(info.event.id); },
             eventDrop: function(info) { handleSync(info.event); },
             eventResize: function(info) { handleSync(info.event); },
+            // 同步 FullCalendar 内置 prev/next/today 导航与我们的 currentMonday
+            datesSet: function(dateInfo) {
+                const viewStart = dateInfo.start;
+                const rawDay = viewStart.getDay();
+                const diff = rawDay === 0 ? -6 : 1 - rawDay;
+                const newMonday = new Date(viewStart);
+                newMonday.setDate(viewStart.getDate() + diff);
+                newMonday.setHours(0, 0, 0, 0);
+                // 避免重复刷新（与当前周一相同时跳过）
+                if (currentMonday && isSameDay(newMonday, currentMonday)) return;
+                currentMonday = newMonday;
+                refreshCalendarEvents();
+                updateCurrentWeekLabel();
+                updateSemesterProgress();
+                updateWeekSelectorSelection();
+                renderCoursesList();
+            },
             events: getMappedEvents(),
             eventContent: function(arg) {
                 const isAi = arg.event.extendedProps.isAiGenerated;
