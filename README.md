@@ -1,7 +1,6 @@
 # 🧠 AI 智能科研排程舱 — WeekUp 风格增强版 v9.0
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](https://opensource.org/licenses/MIT)
-[![Live Demo](https://img.shields.io/badge/Live-Demo-blue)](https://swuzhiy.github.io/Zhi-Table/)
 
 一个**纯前端**智能课表管理 + AI 排程助手，专为高校学生和科研人员设计。整合**教务课表导入**、**日历拖拽操作**、**大语言模型思维链（CoT）排程**、**多格式导出**，支持 24 周跨周学期管理。
 
@@ -28,9 +27,6 @@
 ---
 
 ## 🚀 快速开始
-
-### 在线使用
-👉 **[GitHub Pages 在线体验](https://swuzhiy.github.io/Zhi-Table/)**
 
 ### 本地运行
 ```bash
