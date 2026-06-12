@@ -562,19 +562,22 @@
         </div>
     </div>
 </div>
-</div>
-
-<div id="importPreviewPanel" class="hidden fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center backdrop-blur-sm transition-opacity">
-    <div class="bg-white p-6 rounded-2xl w-[800px] max-w-[95vw] shadow-2xl border border-slate-200 animate-slide-down max-h-[90vh] flex flex-col">
+</div<div id="importPreviewPanel" class="hidden fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center backdrop-blur-sm transition-opacity">
+    <div class="bg-white p-6 rounded-2xl w-[850px] max-w-[95vw] shadow-2xl border border-slate-200 animate-slide-down max-h-[92vh] flex flex-col">
         <div class="flex items-center justify-between mb-3 flex-shrink-0">
             <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
                 <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-500"></i>
                 <span>课表导入预览</span>
                 <span id="importCountBadge" class="text-[10px] bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-full font-bold"></span>
             </h3>
-            <button onclick="closeImportPreview()" class="text-slate-400 hover:text-slate-600 transition-colors">
-                <i data-lucide="x" class="w-4 h-4"></i>
-            </button>
+            <div class="flex items-center gap-2">
+                <button onclick="triggerPasteImport()" class="text-[10px] font-bold px-2.5 py-1.5 rounded-lg bg-amber-50 text-amber-600 hover:bg-amber-100 border border-amber-200 transition-all flex items-center gap-1">
+                    <i data-lucide="clipboard-paste" class="w-3 h-3"></i>从剪贴板粘贴
+                </button>
+                <button onclick="closeImportPreview()" class="text-slate-400 hover:text-slate-600 transition-colors">
+                    <i data-lucide="x" class="w-4 h-4"></i>
+                </button>
+            </div>
         </div>
 
         <div class="format-tip-card mb-3 flex-shrink-0">
@@ -586,15 +589,32 @@
             地点：<code>地点</code> <code>教室</code> <code>位置</code> <code>location</code> <code>place</code> <code>room</code>
         </div>
 
-        <p class="text-[11px] text-slate-500 mb-3 flex-shrink-0">
-            系统已自动识别表头并完成解析（含<strong>周次</strong>信息）。请核对下方预览数据，确认无误后选择导入模式。
+        <p class="text-[11px] text-slate-500 mb-2 flex-shrink-0">
+            系统已自动识别表头并完成解析（含<strong>周次</strong>信息）。勾选要导入的行，确认无误后选择导入模式。
         </p>
 
-        <div class="preview-table-container flex-1 min-h-0 mb-4" id="previewTableContainer">
+        <div class="flex items-center gap-3 mb-2 flex-shrink-0">
+            <label class="flex items-center gap-1 cursor-pointer text-[10px] text-slate-600 font-medium">
+                <input type="checkbox" id="importSelectAll" checked onchange="toggleSelectAllImport()" class="w-3.5 h-3.5 rounded accent-indigo-600">
+                全选/取消全选 (<span id="importSelectedCount">0</span>)
+            </label>
+            <span id="importConflictWarning" class="hidden text-[10px] text-amber-600 font-bold flex items-center gap-1">
+                <i data-lucide="alert-triangle" class="w-3 h-3"></i><span id="importConflictText"></span>
+            </span>
+        </div>
+
+        <div class="preview-table-container flex-1 min-h-0 mb-2" id="previewTableContainer">
             <table id="previewTable">
-                <thead><tr><th>#</th><th>课程名称</th><th>星期</th><th>开始时间</th><th>结束时间</th><th>周次</th><th>地点</th></tr></thead>
+                <thead><tr><th class="w-8"><span class="text-[9px]">选择</span></th><th>#</th><th>课程名称</th><th>星期</th><th>开始时间</th><th>结束时间</th><th>周次</th><th>地点</th></tr></thead>
                 <tbody id="previewTableBody"></tbody>
             </table>
+        </div>
+
+        <div id="skippedRowsSection" class="hidden flex-shrink-0 mb-2 bg-rose-50 border border-rose-200 rounded-xl p-3">
+            <p class="text-[10px] font-bold text-rose-700 mb-1 flex items-center gap-1">
+                <i data-lucide="skip-forward" class="w-3 h-3"></i>跳过的行 (<span id="skippedCount">0</span>)
+            </p>
+            <div id="skippedRowsList" class="text-[9px] text-rose-600 max-h-24 overflow-y-auto"></div>
         </div>
 
         <div class="flex-shrink-0 border-t border-slate-100 pt-4">
@@ -614,17 +634,14 @@
                 <div class="flex gap-2">
                     <button onclick="closeImportPreview()"
                     class="px-4 py-2 text-xs font-bold rounded-xl text-slate-600 bg-slate-100 hover:bg-slate-200 transition-all">取消</button>
-                    <button onclick="confirmImport()"
+                    <button onclick="confirmImport()" id="confirmImportBtn"
                     class="px-5 py-2 text-xs font-bold rounded-xl bg-emerald-600 text-white hover:bg-emerald-700 active:scale-95 transition-all shadow-sm flex items-center gap-1.5">
                     <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>确认导入
                 </button>
             </div>
         </div>
     </div>
-</div>
-</div>
-</div>
-</main>
+</div></main>
 
 <script>
     // ==================== 常量 ====================
@@ -765,14 +782,14 @@
 
     function identifyColumnType(headerName) {
         const h = String(headerName).toLowerCase().trim();
-        if (/课程名|课名|名称|课程|科目|课题|标题|title|name|course|subject|summary/.test(h)) return 'title';
-        if (/星期|周几|上课星期|day|week_day|星期几/.test(h) && !/周次|教学周|week_range|weeks/.test(h)) return 'dayOfWeek';
-        if (/周次|上课周次|教学周|weeks|week_range|week_num|上课周/.test(h)) return 'weeks';
-        if (/时间|节次|上课时间|时段|period|time|节数/.test(h) && !/周次|星期/.test(h)) return 'time';
-        if (/地点|教室|上课地点|位置|location|place|room|教学楼/.test(h)) return 'location';
-        if (/教师|老师|讲师|授课教师|teacher|instructor/.test(h)) return 'teacher';
-        if (/开始时间|起始时间|start|begin/.test(h) && !/结束/.test(h)) return 'startTime';
-        if (/结束时间|截止时间|end|finish/.test(h) && !/开始/.test(h)) return 'endTime';
+        if (/课程名|课名|名称|课程|科目|课题|标题|课程名称|课程标题|title|name|course|subject|summary|class/.test(h)) return 'title';
+        if (/星期|周几|上课星期|上课日|星期几|上课星期几|day|week_day|weekday|dayofweek/.test(h) && !/周次|教学周|week_range|weeks/.test(h)) return 'dayOfWeek';
+        if (/周次|上课周次|教学周|上课周|周数|weeks|week_range|week_num|weekno|week_no/.test(h)) return 'weeks';
+        if (/时间|节次|上课时间|时段|上课时段|period|time|节数|课时|上课节/.test(h) && !/周次|星期/.test(h)) return 'time';
+        if (/地点|教室|上课地点|位置|上课位置|location|place|room|教学楼|地址|address|venue|classroom/.test(h)) return 'location';
+        if (/教师|老师|讲师|授课教师|授课老师|teacher|instructor|professor|lecturer/.test(h)) return 'teacher';
+        if (/开始时间|起始时间|开始|起始|start|begin|start_time|begin_time/.test(h) && !/结束/.test(h)) return 'startTime';
+        if (/结束时间|截止时间|结束|截止|end|finish|end_time|finish_time/.test(h) && !/开始/.test(h)) return 'endTime';
         return null;
     }
 
@@ -786,6 +803,7 @@
     let calendarInstance = null;
     let currentMonday = null;
     let pendingImportCourses = [];
+    let pendingImportSkipped = [];
     let importSourceFileName = '';
 
     // ==================== 初始化 ====================
@@ -857,12 +875,17 @@
         const file = event.target.files[0];
         if (!file) return;
         importSourceFileName = file.name;
+        pendingImportSkipped = [];
         const ext = file.name.split('.').pop().toLowerCase();
         try {
             if (ext === 'xlsx' || ext === 'xls') await parseXLSXFile(file);
             else if (ext === 'ics') await parseICSFile(file);
             else if (ext === 'csv') await parseCSVFile(file);
             else { showToast('不支持的文件格式，请使用 .xlsx、.ics 或 .csv 文件', 'error'); return; }
+            if (pendingImportCourses.length === 0 && pendingImportSkipped.length > 0) {
+                showToast(`未能解析出有效课程。${pendingImportSkipped.length} 行被跳过，请检查文件格式`, 'error');
+                return;
+            }
             if (pendingImportCourses.length === 0) { showToast('未能从文件中解析出有效的课程数据，请检查文件格式',
                 'error'); return; }
             showImportPreview();
@@ -895,15 +918,18 @@
         const endTimeCol = getCol('endTime');
         const weeksCol = getCol('weeks');
         const results = [];
+        const skipped = [];
         const colorPalette = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#ec4899', '#06b6d4', '#f97316',
             '#6366f1', '#14b8a6'];
         let colorIdx = 0;
         for (let i = 0; i < jsonData.length; i++) {
             const row = jsonData[i];
+            const rowNum = i + 2; // Excel rows: 1=header, data starts at 2
             const title = titleCol ? String(row[titleCol] || '').trim() : '';
-            if (!title) continue;
+            if (!title) { skipped.push({ row: rowNum, reason: '缺少课程名称' }); continue; }
             let dayOfWeek = null;
             if (dayCol) dayOfWeek = parseDayOfWeek(String(row[dayCol] || ''));
+            if (!dayOfWeek) { skipped.push({ row: rowNum, reason: `无法识别星期："${String(row[dayCol] || '').slice(0,20)}"` }); continue; }
             let startTime = null,
                 endTime = null;
             if (startTimeCol && endTimeCol) {
@@ -916,8 +942,7 @@
             if (!startTime && timeCol) { const timeResult = parseTimeColumn(String(row[timeCol] || '')); if (
                     timeResult) { startTime = timeResult.startTime;
                     endTime = timeResult.endTime; } }
-            if (!startTime || !endTime) continue;
-            if (!dayOfWeek) continue;
+            if (!startTime || !endTime) { skipped.push({ row: rowNum, reason: `无法解析时间："${String(row[timeCol] || '').slice(0,30)}"` }); continue; }
             let weeks = null;
             if (weeksCol) weeks = parseWeeksString(String(row[weeksCol] || ''));
             if (!weeks) weeks = generateAllWeeks();
@@ -930,6 +955,7 @@
             colorIdx++;
         }
         pendingImportCourses = results;
+        pendingImportSkipped = skipped;
     }
 
     async function parseICSFile(file) {
@@ -1016,15 +1042,18 @@
             endTimeIdx = getColIdx('endTime'),
             weeksIdx = getColIdx('weeks');
         const results = [];
+        const skipped = [];
         const colorPalette = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#ec4899', '#06b6d4', '#f97316',
             '#6366f1', '#14b8a6'];
         let colorIdx = 0;
         for (let i = 1; i < lines.length; i++) {
             const cols = parseCSVLine(lines[i]);
+            const rowNum = i + 1;
             const title = titleIdx !== null ? (cols[titleIdx] || '').trim() : '';
-            if (!title) continue;
+            if (!title) { skipped.push({ row: rowNum, reason: '缺少课程名称' }); continue; }
             let dayOfWeek = null;
             if (dayIdx !== null) dayOfWeek = parseDayOfWeek(String(cols[dayIdx] || ''));
+            if (!dayOfWeek) { skipped.push({ row: rowNum, reason: `无法识别星期："${String(cols[dayIdx] || '').slice(0,20)}"` }); continue; }
             let startTime = null,
                 endTime = null;
             if (startTimeIdx !== null && endTimeIdx !== null) { const st = String(cols[startTimeIdx] || '').trim(),
@@ -1034,8 +1063,7 @@
             if (!startTime && timeIdx !== null) { const timeResult = parseTimeColumn(String(cols[timeIdx] || '')); if (
                     timeResult) { startTime = timeResult.startTime;
                     endTime = timeResult.endTime; } }
-            if (!startTime || !endTime) continue;
-            if (!dayOfWeek) continue;
+            if (!startTime || !endTime) { skipped.push({ row: rowNum, reason: `无法解析时间："${String(cols[timeIdx] || '').slice(0,30)}"` }); continue; }
             let weeks = null;
             if (weeksIdx !== null) weeks = parseWeeksString(String(cols[weeksIdx] || ''));
             if (!weeks) weeks = generateAllWeeks();
@@ -1048,6 +1076,7 @@
             colorIdx++;
         }
         pendingImportCourses = results;
+        pendingImportSkipped = skipped;
     }
 
     function parseCSVLine(line) {
@@ -1067,17 +1096,40 @@
         const tbody = document.getElementById('previewTableBody');
         const countBadge = document.getElementById('importCountBadge');
         const infoText = document.getElementById('importInfoText');
+        const skippedSection = document.getElementById('skippedRowsSection');
+        const skippedList = document.getElementById('skippedRowsList');
+        const skippedCount = document.getElementById('skippedCount');
+        const selCount = document.getElementById('importSelectedCount');
+        const conflictWarning = document.getElementById('importConflictWarning');
+        const conflictText = document.getElementById('importConflictText');
         panel.classList.remove('hidden');
         panel.classList.add('animate-slide-down');
         countBadge.textContent = `${pendingImportCourses.length} 条记录`;
         infoText.textContent = `来源文件：${importSourceFileName} | 当前课表已有 ${courses.length} 条记录`;
+        selCount.textContent = pendingImportCourses.length;
+        document.getElementById('importSelectAll').checked = true;
+        // 显示跳过的行
+        if (pendingImportSkipped.length > 0) {
+            skippedSection.classList.remove('hidden');
+            skippedCount.textContent = pendingImportSkipped.length;
+            skippedList.innerHTML = pendingImportSkipped.map(s => `<div>· 第${s.row}行: ${s.reason}</div>`).join('');
+        } else { skippedSection.classList.add('hidden'); }
+        // 冲突检测
+        const conflicts = detectImportConflicts(pendingImportCourses);
+        if (conflicts.length > 0) {
+            conflictWarning.classList.remove('hidden');
+            conflictText.textContent = `检测到 ${conflicts.length} 个时间冲突`;
+        } else { conflictWarning.classList.add('hidden'); }
         const dayNames = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
         tbody.innerHTML = '';
         pendingImportCourses.forEach((c, idx) => {
             const tr = document.createElement('tr');
+            const hasConflict = conflicts.some(conf => conf.index === idx);
+            tr.className = hasConflict ? 'bg-amber-50' : '';
             tr.innerHTML = `
+            <td><input type="checkbox" class="import-row-checkbox w-3.5 h-3.5 rounded accent-indigo-600" data-import-idx="${idx}" checked onchange="updateImportSelectedCount()"></td>
             <td class="text-slate-400 text-[10px]">${idx + 1}</td>
-            <td class="font-bold text-[11px]">${escapeHTML(c.title)}</td>
+            <td class="font-bold text-[11px]">${escapeHTML(c.title)}${hasConflict ? ' <span class="text-[9px] text-amber-600">⚠冲突</span>' : ''}</td>
             <td>${dayNames[c.dayOfWeek] || '未知'}</td>
             <td class="font-mono text-[10px]">${c.startTime}</td>
             <td class="font-mono text-[10px]">${c.endTime}</td>
@@ -1088,19 +1140,107 @@
         lucide.createIcons();
     }
 
+    function detectImportConflicts(importCourses) {
+        const conflicts = [];
+        importCourses.forEach((ic, idx) => {
+            const existingConflict = courses.some(c =>
+                c.dayOfWeek === ic.dayOfWeek &&
+                c.startTime < ic.endTime && c.endTime > ic.startTime &&
+                c.weeks.some(w => ic.weeks.includes(w))
+            );
+            const importConflict = importCourses.some((c2, idx2) =>
+                idx2 !== idx && c2.dayOfWeek === ic.dayOfWeek &&
+                c2.startTime < ic.endTime && c2.endTime > ic.startTime &&
+                c2.weeks.some(w => ic.weeks.includes(w))
+            );
+            if (existingConflict || importConflict) conflicts.push({ index: idx, existingConflict, importConflict });
+        });
+        return conflicts;
+    }
+
+    function toggleSelectAllImport() {
+        const selectAll = document.getElementById('importSelectAll').checked;
+        document.querySelectorAll('.import-row-checkbox').forEach(cb => { cb.checked = selectAll; });
+        updateImportSelectedCount();
+    }
+
+    function updateImportSelectedCount() {
+        const checked = document.querySelectorAll('.import-row-checkbox:checked').length;
+        document.getElementById('importSelectedCount').textContent = checked;
+    }
+
+    function triggerPasteImport() {
+        navigator.clipboard.readText().then(text => {
+            if (!text || !text.trim()) { showToast('剪贴板为空', 'error'); return; }
+            const lines = text.split(/\r?\n/).filter(l => l.trim());
+            if (lines.length < 2) { showToast('数据不足，至少需要表头和一行数据', 'error'); return; }
+            const delimiter = lines[0].includes('\t') ? '\t' : (lines[0].split(',').length > 1 ? ',' : '\t');
+            const headers = delimiter === '\t' ? lines[0].split('\t') : parseCSVLine(lines[0]);
+            const columnMap = {};
+            headers.forEach((h, i) => { const type = identifyColumnType(h); if (type) { if (!columnMap[type]) columnMap[type] = []; columnMap[type].push(i); } });
+            const getColIdx = (type) => (columnMap[type] && columnMap[type].length > 0) ? columnMap[type][0] : null;
+            const titleIdx = getColIdx('title'), dayIdx = getColIdx('dayOfWeek'), timeIdx = getColIdx('time');
+            const locationIdx = getColIdx('location'), startTimeIdx = getColIdx('startTime'), endTimeIdx = getColIdx('endTime');
+            const weeksIdx = getColIdx('weeks');
+            const results = []; const skipped = [];
+            const colorPalette = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#ec4899', '#06b6d4', '#f97316', '#6366f1', '#14b8a6'];
+            let colorIdx = 0;
+            for (let i = 1; i < lines.length; i++) {
+                const cols = delimiter === '\t' ? lines[i].split('\t') : parseCSVLine(lines[i]);
+                const title = titleIdx !== null ? (cols[titleIdx] || '').trim() : '';
+                if (!title) { skipped.push({ row: i+1, reason: '缺少课程名称' }); continue; }
+                let dayOfWeek = null;
+                if (dayIdx !== null) dayOfWeek = parseDayOfWeek(String(cols[dayIdx] || ''));
+                if (!dayOfWeek) { skipped.push({ row: i+1, reason: '缺少或无法识别星期信息' }); continue; }
+                let startTime = null, endTime = null;
+                if (startTimeIdx !== null && endTimeIdx !== null) {
+                    const st = String(cols[startTimeIdx] || '').trim(), et = String(cols[endTimeIdx] || '').trim();
+                    const timeResult = parseTimeRangeString(st + '-' + et);
+                    if (timeResult) { startTime = timeResult.startTime; endTime = timeResult.endTime; }
+                }
+                if (!startTime && timeIdx !== null) {
+                    const timeResult = parseTimeColumn(String(cols[timeIdx] || ''));
+                    if (timeResult) { startTime = timeResult.startTime; endTime = timeResult.endTime; }
+                }
+                if (!startTime || !endTime) { skipped.push({ row: i+1, reason: '缺少或无法解析时间信息' }); continue; }
+                let weeks = null;
+                if (weeksIdx !== null) weeks = parseWeeksString(String(cols[weeksIdx] || ''));
+                if (!weeks) weeks = generateAllWeeks();
+                let location = locationIdx !== null ? String(cols[locationIdx] || '').trim() : '';
+                results.push({ title, dayOfWeek, startTime, endTime, weeks, location, color: colorPalette[colorIdx % colorPalette.length], isAiGenerated: false });
+                colorIdx++;
+            }
+            if (results.length === 0) { showToast('未能从粘贴数据中解析出有效课程', 'error'); return; }
+            importSourceFileName = '剪贴板粘贴';
+            pendingImportCourses = results;
+            pendingImportSkipped = skipped;
+            showImportPreview();
+        }).catch(() => { showToast('无法读取剪贴板，请尝试手动粘贴到文件导入', 'error'); });
+    }
+
     function closeImportPreview() { document.getElementById('importPreviewPanel').classList.add('hidden');
         pendingImportCourses = [];
+        pendingImportSkipped = [];
         importSourceFileName = ''; }
 
     function confirmImport() {
+        const checkedBoxes = document.querySelectorAll('.import-row-checkbox:checked');
+        const selectedIndices = Array.from(checkedBoxes).map(cb => parseInt(cb.dataset.importIdx));
+        if (selectedIndices.length === 0) { showToast('请至少选择一条课程记录', 'error'); return; }
         const modeRadio = document.querySelector('input[name="importMode"]:checked');
         const mode = modeRadio ? modeRadio.value : 'merge';
         if (mode === 'replace') courses = [];
-        const importedCourses = pendingImportCourses.map(c => ({ ...c, id: 'imp_' + Date.now() + '_' + Math.random()
+        const selectedCourses = selectedIndices.map(i => pendingImportCourses[i]).filter(Boolean);
+        const importedCourses = selectedCourses.map(c => ({ ...c, id: 'imp_' + Date.now() + '_' + Math.random()
                 .toString(36).slice(2, 8) }));
         courses = [...courses, ...importedCourses];
         renderCoursesList();
         persistCourses();
+        // 自动滚动到课程列表底部
+        setTimeout(() => {
+            const coursesList = document.getElementById('coursesList');
+            if (coursesList) coursesList.scrollTop = coursesList.scrollHeight;
+        }, 200);
         showToast(`成功导入 ${importedCourses.length} 条课程记录！`, 'success');
         triggerSuccessConfetti();
         closeImportPreview();
