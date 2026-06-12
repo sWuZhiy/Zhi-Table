@@ -5,7 +5,7 @@
 
 一个**纯前端**智能课表管理 + AI 排程助手，专为高校学生和科研人员设计。整合**教务课表导入**、**日历拖拽操作**、**大语言模型思维链（CoT）排程**、**多格式导出**，支持 24 周跨周学期管理。
 
-![界面总览](https://raw.githubusercontent.com/sWuZhiy/Zhi-Table/main/screenshot.png)
+![界面总览](界面.png)
 
 ---
 
