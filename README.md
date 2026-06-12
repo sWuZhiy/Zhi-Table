@@ -185,12 +185,9 @@ const PERIOD_TIME_MAP = [
 
 ## 📄 许可
 
-[MIT License](LICENSE) © 2025 Your Name
+[MIT License](LICENSE) © 2026 WuZhi
 
 ---
-
-⭐ 如果这个项目对你有帮助，请点亮 Star 支持我们！
-```
-
----
-
+**Created by WuZhi**  
+**Last Updated: 2026-02-23**  
+**Version: 8.0**  

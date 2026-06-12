@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>AI 智能课表规划舱 - WeekUp 风格增强版 v8.0</title>
+    <title>AI 智能课表规划舱 - WeekUp 风格增强版 v9.0</title>
 
     <script src="https://cdn.tailwindcss.com">
     </script>
@@ -41,7 +41,7 @@
             --fc-page-bg-color: #ffffff;
         }
         .fc .fc-toolbar-title {
-            font-size: 1.1rem !important;
+            font-size: 1.05rem !important;
             font-weight: 700;
             color: #1e293b;
             letter-spacing: -0.01em;
@@ -68,7 +68,7 @@
             border: 1px solid #f1f5f9 !important;
         }
         .fc-timegrid-slot {
-            height: 3.2rem !important;
+            height: 3rem !important;
         }
         .fc-v-event {
             border-radius: 7px !important;
@@ -132,7 +132,6 @@
             color: #4338ca;
         }
 
-        /* 导入预览表格样式 */
         .preview-table-container {
             max-height: 320px;
             overflow-y: auto;
@@ -173,7 +172,6 @@
             border-bottom: none;
         }
 
-        /* 下拉菜单 */
         .dropdown-menu {
             position: absolute;
             right: 0;
@@ -184,7 +182,7 @@
             border-radius: 0.75rem;
             box-shadow: 0 12px 32px rgba(0, 0, 0, 0.12);
             z-index: 60;
-            min-width: 200px;
+            min-width: 210px;
             overflow: hidden;
             animation: slideDown 0.18s ease-out;
         }
@@ -218,11 +216,50 @@
             background: #e2e8f0;
             margin: 0.25rem 0;
         }
+
+        /* 周次标签样式 */
+        .week-badge {
+            display: inline-block;
+            background: #f1f5f9;
+            color: #64748b;
+            font-size: 9px;
+            padding: 2px 7px;
+            border-radius: 10px;
+            font-weight: 600;
+            letter-spacing: 0.02em;
+            white-space: nowrap;
+        }
+        .week-badge.ai-week {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        .week-badge.import-week {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        /* 格式提示卡片 */
+        .format-tip-card {
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: 0.75rem;
+            padding: 0.75rem 1rem;
+            font-size: 10px;
+            color: #92400e;
+            line-height: 1.6;
+        }
+        .format-tip-card code {
+            background: #fef3c7;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-family: 'SF Mono', 'Consolas', 'Monaco', monospace;
+            font-size: 9px;
+            color: #b45309;
+        }
     </style>
 </head>
 <body class="bg-slate-50 text-slate-900 min-h-screen flex flex-col antialiased">
 
-    <!-- 顶部导航栏 -->
     <header class="bg-white/85 backdrop-blur-md border-b border-slate-200 py-3 px-5 flex items-center justify-between shadow-sm sticky top-0 z-40">
         <div class="flex items-center gap-3">
             <div class="bg-indigo-600 p-2 rounded-xl text-white shadow-md flex items-center justify-center pulse-ring">
@@ -230,7 +267,7 @@
             </div>
             <div>
                 <h1 class="text-base font-extrabold text-slate-800 leading-tight">AI 智能科研排程舱</h1>
-                <p class="text-[10px] text-slate-400 font-medium">WeekUp 风格 · 鼠标拖拽建课 · AI 思维链推理</p>
+                <p class="text-[10px] text-slate-400 font-medium">WeekUp 风格 · 跨周排程 · AI 思维链推理</p>
             </div>
         </div>
 
@@ -240,7 +277,6 @@
                 <span class="text-[9px] font-bold text-emerald-700">API 就绪</span>
             </div>
 
-            <!-- 导入/导出按钮组 -->
             <div class="relative" id="importExportDropdown">
                 <button onclick="toggleImportExportMenu()"
                 class="text-slate-600 hover:text-indigo-600 flex items-center gap-1.5 text-xs font-bold bg-slate-100 hover:bg-indigo-50 px-3.5 py-2 rounded-lg transition-all border border-slate-200 hover:border-indigo-200">
@@ -265,7 +301,6 @@
             </div>
         </div>
 
-        <!-- 隐藏的文件输入 -->
         <input type="file" id="fileInput" accept=".xlsx,.xls,.ics,.csv" class="hidden" onchange="handleFileImport(event)">
 
         <button onclick="toggleApiSettings()"
@@ -275,7 +310,6 @@
 </div>
 </header>
 
-<!-- API 配置面板 -->
 <div id="apiPanel" class="hidden bg-white border-b border-slate-200 p-6 shadow-lg absolute w-full z-30 animate-slide-down">
     <div class="max-w-5xl mx-auto">
         <div class="flex items-center justify-between mb-5">
@@ -294,7 +328,6 @@
         </button>
     </div>
 </div>
-
 <div class="grid grid-cols-1 md:grid-cols-3 gap-5">
     <div>
         <label class="block text-[11px] font-bold text-slate-600 mb-1.5">1. Base URL (端点)</label>
@@ -302,8 +335,7 @@
         class="w-full p-2.5 text-xs border border-slate-200 rounded-lg bg-slate-50 font-mono focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100"
         placeholder="https://api.deepseek.com/chat/completions">
         <datalist id="url-presets">
-            <option value="https://ark.cn-beijing.volces.com/api/v3/chat/completions" label="火山引擎(豆包) 官方">
-            </option>
+            <option value="https://ark.cn-beijing.volces.com/api/v3/chat/completions" label="火山引擎(豆包) 官方"></option>
             <option value="https://api.deepseek.com/chat/completions" label="DeepSeek 官方"></option>
             <option value="https://api.openai.com/v1/chat/completions" label="OpenAI 官方"></option>
         </datalist>
@@ -325,32 +357,29 @@
 </div>
 </div>
 
-<!-- 主体 -->
 <main class="flex-1 max-w-[1600px] w-full mx-auto p-4 lg:p-6 grid grid-cols-1 lg:grid-cols-12 gap-6 min-h-0 relative">
 
-    <!-- 左侧面板 -->
     <div class="lg:col-span-4 flex flex-col gap-5 overflow-y-auto max-h-[calc(100vh-100px)] pr-1">
 
-        <!-- AI 排程卡片 -->
         <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
             <div class="flex items-center gap-2 mb-2">
                 <i data-lucide="sparkles" class="text-indigo-500 w-5 h-5"></i>
-                <h2 class="text-xs font-bold text-slate-800 uppercase tracking-widest">CoT 强约束智能排程</h2>
+                <h2 class="text-xs font-bold text-slate-800 uppercase tracking-widest">CoT 强约束跨周智能排程</h2>
             </div>
             <p class="text-[11px] text-slate-500 mb-4 leading-relaxed">
-                AI 将执行严格的推演算法，分析您的现有日程以寻找<strong>无碰撞</strong>的空余时间段。请在下方<strong>自然描述</strong>任务需求（含时长、优先级、时间偏好等）。
+                AI 将执行严格的推演算法，分析您的现有日程以寻找<strong>无碰撞</strong>的空余时间段。支持<strong>跨周排程</strong>——可指定任务在哪些教学周进行。请在下方<strong>自然描述</strong>任务需求（含时长、优先级、时间偏好、周次范围等）。
             </p>
 
             <form onsubmit="runAiPlanner(event)" class="flex flex-col gap-4">
                 <div>
                     <textarea id="goalText"
-                    placeholder="例如：安排3小时的深度学习代码调试，优先下午课程结束后，避开周三组会。或：每天安排1小时论文阅读，放在早上。"
-                    class="w-full p-3 text-xs border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 min-h-[80px] resize-none transition-all"
+                    placeholder="例如：安排3小时的深度学习代码调试，每周三下午，第1-8周。或：每天安排1小时论文阅读，放在早上，覆盖全学期。或：第5-12周每周一和周四安排2小时实验。"
+                    class="w-full p-3 text-xs border border-slate-200 rounded-xl focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 min-h-[90px] resize-none transition-all"
                 required></textarea>
             </div>
             <div class="rounded-2xl border border-indigo-100 bg-indigo-50/70 p-3 text-[10px] text-indigo-700 flex items-start gap-2">
                 <i data-lucide="info" class="w-3.5 h-3.5 flex-shrink-0 mt-0.5"></i>
-                <span>AI 会自动解析您描述的<strong>时长、优先级与偏好</strong>，结合现有课表寻找最佳空档。无需手动设置时长参数。</span>
+                <span>AI 会自动解析<strong>时长、优先级、偏好及周次范围</strong>，结合现有课表寻找最佳空档。支持描述如"第3-10周"、"前8周"、"全学期"等周次表达。</span>
             </div>
             <button type="submit" id="planBtn"
             class="w-full py-3 bg-slate-900 hover:bg-slate-800 rounded-xl text-white font-bold text-xs shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed">
@@ -360,7 +389,6 @@
     </form>
 </div>
 
-<!-- AI 思考链输出 -->
 <div id="thinkingBox" class="hidden bg-indigo-50/80 border border-indigo-100 p-5 rounded-2xl flex flex-col gap-3 shadow-inner animate-slide-down">
     <div class="flex items-center justify-between border-b border-indigo-200/60 pb-2">
         <div class="flex items-center gap-2">
@@ -375,19 +403,19 @@
 <div id="thinkingContent" class="text-[11px] leading-relaxed text-slate-700 font-medium whitespace-pre-wrap"></div>
 </div>
 
-<!-- 错误提示 -->
 <div id="errorAlert" class="hidden bg-rose-50 border border-rose-200 p-4 rounded-2xl flex gap-3 text-rose-800 shadow-sm animate-slide-down">
     <i data-lucide="shield-alert" class="w-4 h-4 flex-shrink-0 mt-0.5"></i>
     <div class="text-[11px] leading-relaxed"><span class="font-bold">运行时异常：</span><span id="errorMsg"></span></div>
 </div>
 
-<!-- 课程列表 -->
 <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex-1 min-h-[200px] overflow-y-auto flex flex-col">
     <div class="flex items-center justify-between text-slate-800 font-bold text-xs mb-4">
         <div class="flex items-center gap-1.5">
             <i data-lucide="list-checks" class="w-4 h-4 text-slate-500"></i>
             <span>课程清单</span>
             <span id="courseCount" class="text-[10px] text-slate-400 font-normal ml-1">(0)</span>
+            <span id="filteredCount" class="text-[10px] text-indigo-400 font-normal ml-1 hidden"></span>
+                <span id="courseStatsBar" class="text-[9px] text-slate-400 font-normal ml-2 hidden"></span>
         </div>
         <div class="flex items-center gap-2">
             <button onclick="openAddCourseForm()"
@@ -400,16 +428,41 @@
     </button>
 </div>
 </div>
-<div id="coursesList" class="flex flex-col gap-2.5"></div>
-<div class="text-[10px] text-slate-400 mt-3 pt-2 border-t border-slate-100 text-center">
-    <i data-lucide="mouse-pointer-click" class="w-3 h-3 inline mr-1"></i> 日历上拖拽框选即可快速建课 · 点击事件可编辑或删除
+
+<!-- 搜索与筛选工具栏 -->
+<div class="flex flex-col gap-2 mb-3 flex-shrink-0">
+    <div class="relative">
+        <i data-lucide="search" class="w-3 h-3 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400"></i>
+        <input id="courseSearch" type="text" placeholder="搜索课程名称..."
+        class="w-full pl-7 pr-3 py-2 text-[11px] border border-slate-200 rounded-lg bg-slate-50 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all"
+        oninput="renderCoursesList()">
+    </div>
+    <div class="flex items-center gap-1.5 flex-wrap">
+        <select id="courseDayFilter" onchange="renderCoursesList()"
+        class="text-[10px] border border-slate-200 rounded-lg bg-slate-50 px-2 py-1.5 focus:border-indigo-500 focus:outline-none cursor-pointer">
+        <option value="all">全部星期</option>
+        <option value="1">周一</option><option value="2">周二</option><option value="3">周三</option>
+        <option value="4">周四</option><option value="5">周五</option><option value="6">周六</option><option value="7">周日</option>
+    </select>
+    <label class="flex items-center gap-1 cursor-pointer text-[10px] text-slate-500 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-200 hover:border-indigo-200 transition-all">
+        <input type="checkbox" id="courseThisWeekOnly" onchange="renderCoursesList()" class="w-3 h-3 rounded accent-indigo-600">
+        仅本周
+    </label>
+    <label class="flex items-center gap-1 cursor-pointer text-[10px] text-slate-500 bg-slate-50 px-2 py-1.5 rounded-lg border border-slate-200 hover:border-indigo-200 transition-all">
+        <input type="checkbox" id="courseGroupByDay" onchange="renderCoursesList()" class="w-3 h-3 rounded accent-indigo-600">
+        按天分组
+    </label>
+</div>
+</div>
+
+<div id="coursesList" class="flex flex-col gap-2.5 min-h-0 overflow-y-auto"></div>
+<div class="text-[10px] text-slate-400 mt-3 pt-2 border-t border-slate-100 text-center flex-shrink-0">
+    <i data-lucide="mouse-pointer-click" class="w-3 h-3 inline mr-1"></i> 日历上拖拽框选即可快速建课 · 点击事件可编辑或删除 · 支持跨周排程
 </div>
 </div>
 </div>
 
-<!-- 右侧日历 -->
 <div class="lg:col-span-8 bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[700px] lg:h-[800px]">
-    <!-- 周选择器区域 -->
     <div class="flex items-center justify-between gap-4 mb-4 flex-wrap">
         <div class="flex items-center gap-3">
             <div class="flex items-center gap-1.5">
@@ -417,7 +470,7 @@
                 <span class="text-[11px] font-bold text-slate-700">教学周选择</span>
             </div>
             <select id="weekSelector" onchange="goToWeek(this.value)"
-            class="text-xs rounded-xl border border-slate-200 bg-slate-50 p-2.5 pr-8 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 min-w-[180px] cursor-pointer transition-all appearance-none"
+            class="text-xs rounded-xl border border-slate-200 bg-slate-50 p-2.5 pr-8 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 min-w-[200px] cursor-pointer transition-all appearance-none"
         style="background-image: url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%2212%22 height=%2212%22 viewBox=%220 0 24 24%22 fill=%22none%22 stroke=%22%23475569%22 stroke-width=%222%22%3E%3Cpath d=%22M6 9l6 6 6-6%22/%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 10px center;">
         <option value="">请选择周</option>
     </select>
@@ -433,9 +486,8 @@
 <div id="calendar" class="w-full h-full"></div>
 </div>
 
-<!-- 编辑/新建弹窗 -->
 <div id="addCoursePanel" class="hidden fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center backdrop-blur-sm transition-opacity">
-    <div class="bg-white p-6 rounded-2xl w-[360px] shadow-2xl border border-slate-200 animate-slide-down">
+    <div class="bg-white p-6 rounded-2xl w-[400px] max-w-[95vw] shadow-2xl border border-slate-200 animate-slide-down max-h-[90vh] overflow-y-auto">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
                 <i data-lucide="edit-3" class="w-4 h-4 text-indigo-500"></i>
@@ -451,6 +503,14 @@
                 <label class="block text-[10px] font-bold text-slate-500 mb-1">事件名称</label>
                 <input id="newTitle" placeholder="输入课程或计划名称"
                 class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all">
+            </div>
+            <div>
+                <label class="block text-[10px] font-bold text-slate-500 mb-1">
+                    教学周次 <span class="text-slate-400 font-normal">（如 "1-16" 或 "1,3,5,7" 或 "全部"）</span>
+                </label>
+                <input id="newWeeks" placeholder="1-16（留空表示全部周）"
+                class="w-full p-2.5 border border-slate-200 rounded-lg bg-slate-50 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-100 transition-all font-mono text-[11px]">
+                <p class="text-[9px] text-slate-400 mt-0.5">留空或填"全部"=所有24周；"1-8"=第1到8周；"1,3,5"=指定周</p>
             </div>
             <div class="flex gap-3">
                 <div class="w-1/2">
@@ -504,10 +564,9 @@
 </div>
 </div>
 
-<!-- 导入预览弹窗 -->
 <div id="importPreviewPanel" class="hidden fixed inset-0 bg-slate-900/50 z-50 flex items-center justify-center backdrop-blur-sm transition-opacity">
-    <div class="bg-white p-6 rounded-2xl w-[720px] max-w-[95vw] shadow-2xl border border-slate-200 animate-slide-down max-h-[90vh] flex flex-col">
-        <div class="flex items-center justify-between mb-4 flex-shrink-0">
+    <div class="bg-white p-6 rounded-2xl w-[800px] max-w-[95vw] shadow-2xl border border-slate-200 animate-slide-down max-h-[90vh] flex flex-col">
+        <div class="flex items-center justify-between mb-3 flex-shrink-0">
             <h3 class="text-sm font-bold text-slate-800 flex items-center gap-2">
                 <i data-lucide="file-spreadsheet" class="w-4 h-4 text-emerald-500"></i>
                 <span>课表导入预览</span>
@@ -518,19 +577,26 @@
             </button>
         </div>
 
+        <div class="format-tip-card mb-3 flex-shrink-0">
+            <strong>📋 支持导入的列名（自动识别表头）：</strong><br>
+            课程名称：<code>课程名</code> <code>课名</code> <code>名称</code> <code>title</code> <code>course</code> <code>summary</code><br>
+            星期：<code>星期</code> <code>周几</code> <code>上课星期</code> <code>day</code> （支持"周一"/"Monday"/"1"等格式）<br>
+            时间：<code>时间</code> <code>节次</code> <code>上课时间</code> <code>period</code> <code>time</code> （支持"08:00-09:30"或"第1-2节"格式）<br>
+            周次：<code>周次</code> <code>上课周次</code> <code>教学周</code> <code>weeks</code> <code>week</code> （支持"1-16"/"第1-8周"/"1,3,5"格式，留空=全部周）<br>
+            地点：<code>地点</code> <code>教室</code> <code>位置</code> <code>location</code> <code>place</code> <code>room</code>
+        </div>
+
         <p class="text-[11px] text-slate-500 mb-3 flex-shrink-0">
-            系统已自动识别表头并完成解析。请核对下方预览数据，确认无误后选择导入模式。
+            系统已自动识别表头并完成解析（含<strong>周次</strong>信息）。请核对下方预览数据，确认无误后选择导入模式。
         </p>
 
-        <!-- 预览表格 -->
         <div class="preview-table-container flex-1 min-h-0 mb-4" id="previewTableContainer">
             <table id="previewTable">
-                <thead><tr><th>#</th><th>课程名称</th><th>星期</th><th>开始时间</th><th>结束时间</th><th>地点</th></tr></thead>
+                <thead><tr><th>#</th><th>课程名称</th><th>星期</th><th>开始时间</th><th>结束时间</th><th>周次</th><th>地点</th></tr></thead>
                 <tbody id="previewTableBody"></tbody>
             </table>
         </div>
 
-        <!-- 导入模式选择 -->
         <div class="flex-shrink-0 border-t border-slate-100 pt-4">
             <div class="flex items-center gap-3 mb-3">
                 <span class="text-[11px] font-bold text-slate-600">导入模式：</span>
@@ -561,184 +627,164 @@
 </main>
 
 <script>
-    // ==================== 节次时间映射表（常见高校通用） ====================
+    // ==================== 常量 ====================
+    const TOTAL_WEEKS = 24;
+    const SEMESTER_START = new Date(2026, 1, 23);
+
     const PERIOD_TIME_MAP = [
-        { period: 1, start: '08:00', end: '08:45' },
-        { period: 2, start: '08:50', end: '09:35' },
-        { period: 3, start: '09:50', end: '10:35' },
-        { period: 4, start: '10:40', end: '11:25' },
-        { period: 5, start: '11:30', end: '12:15' },
-        { period: 6, start: '13:30', end: '14:15' },
-        { period: 7, start: '14:20', end: '15:05' },
-        { period: 8, start: '15:20', end: '16:05' },
-        { period: 9, start: '16:10', end: '16:55' },
-        { period: 10, start: '18:00', end: '18:45' },
-        { period: 11, start: '18:50', end: '19:35' },
-        { period: 12, start: '19:40', end: '20:25' },
+        { period: 1, start: '08:00', end: '08:45' }, { period: 2, start: '08:50', end: '09:35' },
+        { period: 3, start: '09:50', end: '10:35' }, { period: 4, start: '10:40', end: '11:25' },
+        { period: 5, start: '11:30', end: '12:15' }, { period: 6, start: '13:30', end: '14:15' },
+        { period: 7, start: '14:20', end: '15:05' }, { period: 8, start: '15:20', end: '16:05' },
+        { period: 9, start: '16:10', end: '16:55' }, { period: 10, start: '18:00', end: '18:45' },
+        { period: 11, start: '18:50', end: '19:35' }, { period: 12, start: '19:40', end: '20:25' },
     ];
 
-    /** 根据节次范围获取时间 */
     function getTimeFromPeriods(periodStart, periodEnd) {
         const startSlot = PERIOD_TIME_MAP.find(p => p.period === periodStart);
         const endSlot = PERIOD_TIME_MAP.find(p => p.period === periodEnd);
-        if (startSlot && endSlot) {
-            return { startTime: startSlot.start, endTime: endSlot.end };
-        }
-        if (startSlot) {
-            return { startTime: startSlot.start, endTime: startSlot.end };
-        }
+        if (startSlot && endSlot) return { startTime: startSlot.start, endTime: endSlot.end };
+        if (startSlot) return { startTime: startSlot.start, endTime: startSlot.end };
         return null;
     }
 
-    /** 解析节次字符串，如 "1-2", "第1-2节", "1,2", "第3节" */
     function parsePeriodString(str) {
         if (!str) return null;
-        // 清理中文和空格
         let cleaned = str.replace(/第|节|课/g, '').replace(/\s+/g, '').trim();
-        // 尝试匹配 "1-2" 或 "1,2" 或 "1"
         const rangeMatch = cleaned.match(/^(\d+)[-–—](\d+)$/);
         const commaMatch = cleaned.match(/^(\d+),(\d+)$/);
         const singleMatch = cleaned.match(/^(\d+)$/);
-        if (rangeMatch) {
-            return getTimeFromPeriods(parseInt(rangeMatch[1]), parseInt(rangeMatch[2]));
-        }
-        if (commaMatch) {
-            return getTimeFromPeriods(parseInt(commaMatch[1]), parseInt(commaMatch[2]));
-        }
-        if (singleMatch) {
-            return getTimeFromPeriods(parseInt(singleMatch[1]), parseInt(singleMatch[1]));
-        }
+        if (rangeMatch) return getTimeFromPeriods(parseInt(rangeMatch[1]), parseInt(rangeMatch[2]));
+        if (commaMatch) return getTimeFromPeriods(parseInt(commaMatch[1]), parseInt(commaMatch[2]));
+        if (singleMatch) return getTimeFromPeriods(parseInt(singleMatch[1]), parseInt(singleMatch[1]));
         return null;
     }
 
-    /** 解析时间范围字符串，如 "08:00-09:35", "8:00-9:35" */
     function parseTimeRangeString(str) {
         if (!str) return null;
         const cleaned = str.replace(/\s+/g, '').trim();
         const match = cleaned.match(/^(\d{1,2}):(\d{2})\s*[-–—]\s*(\d{1,2}):(\d{2})$/);
         if (match) {
-            const sh = String(parseInt(match[1])).padStart(2, '0');
-            const sm = match[2];
-            const eh = String(parseInt(match[3])).padStart(2, '0');
-            const em = match[4];
-            return { startTime: `${sh}:${sm}`, endTime: `${eh}:${em}` };
+            return {
+                startTime: `${String(parseInt(match[1])).padStart(2,'0')}:${match[2]}`,
+                endTime: `${String(parseInt(match[3])).padStart(2,'0')}:${match[4]}`
+            };
         }
         return null;
     }
 
-    /** 综合解析时间列（先尝试直接时间格式，再尝试节次格式） */
     function parseTimeColumn(value) {
         if (!value) return null;
         const str = String(value).trim();
-        // 先尝试直接时间格式
         const timeResult = parseTimeRangeString(str);
         if (timeResult) return timeResult;
-        // 再尝试节次格式
-        const periodResult = parsePeriodString(str);
-        if (periodResult) return periodResult;
-        return null;
+        return parsePeriodString(str);
     }
 
-    /** 解析星期字符串 */
     function parseDayOfWeek(str) {
         if (!str) return null;
         const s = String(str).trim();
-        // 数字格式
         const numMatch = s.match(/^(\d)$/);
-        if (numMatch) {
-            const n = parseInt(numMatch[1]);
-            if (n >= 1 && n <= 7) return n;
-        }
-        // 中文格式
-        const dayMap = {
-            '周一': 1,
-            '星期一': 1,
-            '周二': 2,
-            '星期二': 2,
-            '周三': 3,
-            '星期三': 3,
-            '周四': 4,
-            '星期四': 4,
-            '周五': 5,
-            '星期五': 5,
-            '周六': 6,
-            '星期六': 6,
-            '周日': 7,
-            '星期日': 7,
-            '星期天': 7,
-            '周天': 7,
-        };
-        for (const [key, val] of Object.entries(dayMap)) {
-            if (s.includes(key)) return val;
-        }
-        // 英文格式
-        const engMap = {
-            'mon': 1,
-            'monday': 1,
-            'tue': 2,
-            'tuesday': 2,
-            'wed': 3,
-            'wednesday': 3,
-            'thu': 4,
-            'thursday': 4,
-            'fri': 5,
-            'friday': 5,
-            'sat': 6,
-            'saturday': 6,
-            'sun': 7,
-            'sunday': 7,
-        };
+        if (numMatch) { const n = parseInt(numMatch[1]); if (n >= 1 && n <= 7) return n; }
+        const dayMap = { '周一': 1, '星期一': 1, '周二': 2, '星期二': 2, '周三': 3, '星期三': 3, '周四': 4, '星期四': 4,
+            '周五': 5, '星期五': 5, '周六': 6, '星期六': 6, '周日': 7, '星期日': 7, '星期天': 7, '周天': 7 };
+        for (const [key, val] of Object.entries(dayMap)) { if (s.includes(key)) return val; }
+        const engMap = { 'mon': 1, 'monday': 1, 'tue': 2, 'tuesday': 2, 'wed': 3, 'wednesday': 3, 'thu': 4,
+            'thursday': 4, 'fri': 5, 'friday': 5, 'sat': 6, 'saturday': 6, 'sun': 7, 'sunday': 7 };
         const lower = s.toLowerCase();
-        for (const [key, val] of Object.entries(engMap)) {
-            if (lower.includes(key)) return val;
-        }
+        for (const [key, val] of Object.entries(engMap)) { if (lower.includes(key)) return val; }
         return null;
     }
 
-    /** 识别列名对应的字段类型 */
+    /** 解析周次字符串 -> 数字数组，如 "1-16" -> [1,2,...,16]，"1,3,5" -> [1,3,5]，空或"全部" -> 所有周 */
+    function parseWeeksString(str) {
+        if (!str || !str.trim()) return generateAllWeeks();
+        const s = str.replace(/第|周/g, '').replace(/\s+/g, '').trim();
+        if (!s || s === '全部' || s === '全' || s.toLowerCase() === 'all') return generateAllWeeks();
+        // 逗号分隔
+        if (s.includes(',')) {
+            const parts = s.split(',').map(p => p.trim()).filter(p => p);
+            const result = new Set();
+            for (const part of parts) {
+                if (part.includes('-') || part.includes('–') || part.includes('—')) {
+                    const rangeMatch = part.match(/^(\d+)[-–—](\d+)$/);
+                    if (rangeMatch) {
+                        const start = parseInt(rangeMatch[1]);
+                        const end = parseInt(rangeMatch[2]);
+                        for (let i = Math.max(1, start); i <= Math.min(TOTAL_WEEKS, end); i++) result.add(i);
+                    }
+                } else {
+                    const n = parseInt(part);
+                    if (n >= 1 && n <= TOTAL_WEEKS) result.add(n);
+                }
+            }
+            const arr = Array.from(result).sort((a, b) => a - b);
+            return arr.length > 0 ? arr : generateAllWeeks();
+        }
+        // 范围
+        const rangeMatch = s.match(/^(\d+)[-–—](\d+)$/);
+        if (rangeMatch) {
+            const start = parseInt(rangeMatch[1]);
+            const end = parseInt(rangeMatch[2]);
+            const arr = [];
+            for (let i = Math.max(1, start); i <= Math.min(TOTAL_WEEKS, end); i++) arr.push(i);
+            return arr.length > 0 ? arr : generateAllWeeks();
+        }
+        // 单个数字
+        const singleMatch = s.match(/^(\d+)$/);
+        if (singleMatch) {
+            const n = parseInt(singleMatch[1]);
+            return (n >= 1 && n <= TOTAL_WEEKS) ? [n] : generateAllWeeks();
+        }
+        return generateAllWeeks();
+    }
+
+    function generateAllWeeks() {
+        const arr = [];
+        for (let i = 1; i <= TOTAL_WEEKS; i++) arr.push(i);
+        return arr;
+    }
+
+    /** 周次数组转友好字符串 */
+    function weeksToDisplayString(weeksArr) {
+        if (!weeksArr || weeksArr.length === 0) return '全部周';
+        if (weeksArr.length === TOTAL_WEEKS) {
+            const allWeeks = generateAllWeeks();
+            if (allWeeks.every((w, i) => weeksArr[i] === w)) return '全部周';
+        }
+        if (weeksArr.length === 1) return `第${weeksArr[0]}周`;
+        // 检查是否连续
+        let isContinuous = true;
+        for (let i = 1; i < weeksArr.length; i++) {
+            if (weeksArr[i] !== weeksArr[i - 1] + 1) { isContinuous = false; break; }
+        }
+        if (isContinuous) return `第${weeksArr[0]}-${weeksArr[weeksArr.length-1]}周`;
+        if (weeksArr.length <= 6) return weeksArr.map(w => `第${w}周`).join(',');
+        return `第${weeksArr[0]}-${weeksArr[weeksArr.length-1]}周(部分)`;
+    }
+
     function identifyColumnType(headerName) {
         const h = String(headerName).toLowerCase().trim();
-        // 课程名称
-        if (/课程名|课名|名称|课程|科目|课题|标题|title|name|course|subject|summary/.test(h)) {
-            return 'title';
-        }
-        // 星期
-        if (/星期|周几|上课星期|day|week|星期几|周次/.test(h)) {
-            return 'dayOfWeek';
-        }
-        // 时间/节次
-        if (/时间|节次|上课时间|时段|period|time|节数/.test(h)) {
-            return 'time';
-        }
-        // 地点
-        if (/地点|教室|上课地点|位置|location|place|room|教学楼/.test(h)) {
-            return 'location';
-        }
-        // 教师
-        if (/教师|老师|讲师|授课教师|teacher|instructor/.test(h)) {
-            return 'teacher';
-        }
-        // 开始时间
-        if (/开始时间|起始时间|start|begin/.test(h) && !/结束/.test(h)) {
-            return 'startTime';
-        }
-        // 结束时间
-        if (/结束时间|截止时间|end|finish/.test(h) && !/开始/.test(h)) {
-            return 'endTime';
-        }
+        if (/课程名|课名|名称|课程|科目|课题|标题|title|name|course|subject|summary/.test(h)) return 'title';
+        if (/星期|周几|上课星期|day|week_day|星期几/.test(h) && !/周次|教学周|week_range|weeks/.test(h)) return 'dayOfWeek';
+        if (/周次|上课周次|教学周|weeks|week_range|week_num|上课周/.test(h)) return 'weeks';
+        if (/时间|节次|上课时间|时段|period|time|节数/.test(h) && !/周次|星期/.test(h)) return 'time';
+        if (/地点|教室|上课地点|位置|location|place|room|教学楼/.test(h)) return 'location';
+        if (/教师|老师|讲师|授课教师|teacher|instructor/.test(h)) return 'teacher';
+        if (/开始时间|起始时间|start|begin/.test(h) && !/结束/.test(h)) return 'startTime';
+        if (/结束时间|截止时间|end|finish/.test(h) && !/开始/.test(h)) return 'endTime';
         return null;
     }
 
     // ==================== 全局状态 ====================
     let courses = [
         { id: 'c1', title: '现代物理概论', dayOfWeek: 1, startTime: '08:00', endTime: '09:30', color: '#3b82f6',
-            location: '教1-102', isAiGenerated: false },
+            location: '教1-102', weeks: generateAllWeeks(), isAiGenerated: false },
         { id: 'c2', title: '组会', dayOfWeek: 2, startTime: '10:00', endTime: '12:00', color: '#8b5cf6',
-            location: '会议室', isAiGenerated: false }
+            location: '会议室', weeks: generateAllWeeks(), isAiGenerated: false }
     ];
     let calendarInstance = null;
     let currentMonday = null;
-    const SEMESTER_START = new Date(2026, 1, 23);
     let pendingImportCourses = [];
     let importSourceFileName = '';
 
@@ -747,7 +793,6 @@
         document.getElementById('apiBaseUrl').value = localStorage.getItem('apiBaseUrl') || '';
         document.getElementById('modelName').value = localStorage.getItem('modelName') || '';
         document.getElementById('apiKey').value = localStorage.getItem('apiKey') || '';
-
         loadCoursesFromStorage();
         initCurrentMonday();
         populateWeekSelector();
@@ -756,8 +801,6 @@
         renderCoursesList();
         checkNetworkStatusDisplay();
         updateCurrentWeekLabel();
-
-        // 点击页面其他位置关闭导入导出菜单
         document.addEventListener('click', function(e) {
             const dropdown = document.getElementById('importExportDropdown');
             const menu = document.getElementById('importExportMenu');
@@ -774,6 +817,23 @@
         currentMonday = new Date(today);
         currentMonday.setDate(today.getDate() + diff);
         currentMonday.setHours(0, 0, 0, 0);
+    }
+
+    // ==================== 周次工具 ====================
+    function getWeekNumber(monday) {
+        const diffDays = Math.round((monday.getTime() - SEMESTER_START.getTime()) / 86400000);
+        return Math.floor(diffDays / 7) + 1;
+    }
+
+    function getCurrentWeekNumber() {
+        if (!currentMonday) initCurrentMonday();
+        return getWeekNumber(currentMonday);
+    }
+
+    /** 课程是否在当前周有课 */
+    function courseActiveInWeek(course, weekNum) {
+        if (!course.weeks || course.weeks.length === 0) return true;
+        return course.weeks.includes(weekNum);
     }
 
     // ==================== 导入/导出菜单 ====================
@@ -796,66 +856,36 @@
     async function handleFileImport(event) {
         const file = event.target.files[0];
         if (!file) return;
-
         importSourceFileName = file.name;
         const ext = file.name.split('.').pop().toLowerCase();
-
         try {
-            if (ext === 'xlsx' || ext === 'xls') {
-                await parseXLSXFile(file);
-            } else if (ext === 'ics') {
-                await parseICSFile(file);
-            } else if (ext === 'csv') {
-                await parseCSVFile(file);
-            } else {
-                showToast('不支持的文件格式，请使用 .xlsx、.ics 或 .csv 文件', 'error');
-                return;
-            }
-
-            if (pendingImportCourses.length === 0) {
-                showToast('未能从文件中解析出有效的课程数据，请检查文件格式', 'error');
-                return;
-            }
-
+            if (ext === 'xlsx' || ext === 'xls') await parseXLSXFile(file);
+            else if (ext === 'ics') await parseICSFile(file);
+            else if (ext === 'csv') await parseCSVFile(file);
+            else { showToast('不支持的文件格式，请使用 .xlsx、.ics 或 .csv 文件', 'error'); return; }
+            if (pendingImportCourses.length === 0) { showToast('未能从文件中解析出有效的课程数据，请检查文件格式',
+                'error'); return; }
             showImportPreview();
         } catch (err) {
             console.error('文件解析错误:', err);
             showToast('文件解析失败：' + err.message.slice(0, 150), 'error');
         } finally {
-            // 重置文件输入
             document.getElementById('fileInput').value = '';
         }
     }
 
-    /** 解析 XLSX 文件 */
     async function parseXLSXFile(file) {
         const data = await file.arrayBuffer();
         const workbook = XLSX.read(data, { type: 'array' });
         const sheetName = workbook.SheetNames[0];
         const worksheet = workbook.Sheets[sheetName];
         const jsonData = XLSX.utils.sheet_to_json(worksheet, { defval: '' });
-
-        if (jsonData.length === 0) {
-            throw new Error('文件中没有数据');
-        }
-
+        if (jsonData.length === 0) throw new Error('文件中没有数据');
         const headers = Object.keys(jsonData[0]);
-        // 识别列映射
         const columnMap = {};
-        headers.forEach(h => {
-            const type = identifyColumnType(h);
-            if (type) {
-                columnMap[type] = columnMap[type] || [];
-                columnMap[type].push(h);
-            }
-        });
-
-        // 优先使用第一个匹配的列
-        const getCol = (type) => {
-            if (columnMap[type] && columnMap[type].length > 0) return columnMap[type][0];
-            return null;
-        };
-
+        headers.forEach(h => { const type = identifyColumnType(h); if (type) { if (!columnMap[type]) columnMap[
+                type] = []; columnMap[type].push(h); } });
+        const getCol = (type) => (columnMap[type] && columnMap[type].length > 0) ? columnMap[type][0] : null;
         const titleCol = getCol('title');
         const dayCol = getCol('dayOfWeek');
         const timeCol = getCol('time');
@@ -863,165 +893,100 @@
         const teacherCol = getCol('teacher');
         const startTimeCol = getCol('startTime');
         const endTimeCol = getCol('endTime');
-
+        const weeksCol = getCol('weeks');
         const results = [];
         const colorPalette = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#ec4899', '#06b6d4', '#f97316',
-            '#6366f1', '#14b8a6'
-        ];
+            '#6366f1', '#14b8a6'];
         let colorIdx = 0;
-
         for (let i = 0; i < jsonData.length; i++) {
             const row = jsonData[i];
             const title = titleCol ? String(row[titleCol] || '').trim() : '';
             if (!title) continue;
-
             let dayOfWeek = null;
-            if (dayCol) {
-                dayOfWeek = parseDayOfWeek(String(row[dayCol] || ''));
-            }
-
-            let startTime = null;
-            let endTime = null;
-
-            // 优先使用独立的开始/结束时间列
+            if (dayCol) dayOfWeek = parseDayOfWeek(String(row[dayCol] || ''));
+            let startTime = null,
+                endTime = null;
             if (startTimeCol && endTimeCol) {
                 const st = String(row[startTimeCol] || '').trim();
                 const et = String(row[endTimeCol] || '').trim();
                 const timeResult = parseTimeRangeString(`${st}-${et}`);
-                if (timeResult) {
-                    startTime = timeResult.startTime;
-                    endTime = timeResult.endTime;
-                }
+                if (timeResult) { startTime = timeResult.startTime;
+                    endTime = timeResult.endTime; }
             }
-
-            // 其次使用时间列
-            if (!startTime && timeCol) {
-                const timeVal = String(row[timeCol] || '').trim();
-                const timeResult = parseTimeColumn(timeVal);
-                if (timeResult) {
-                    startTime = timeResult.startTime;
-                    endTime = timeResult.endTime;
-                }
-            }
-
-            // 如果还是没有解析到时间，跳过
+            if (!startTime && timeCol) { const timeResult = parseTimeColumn(String(row[timeCol] || '')); if (
+                    timeResult) { startTime = timeResult.startTime;
+                    endTime = timeResult.endTime; } }
             if (!startTime || !endTime) continue;
             if (!dayOfWeek) continue;
-
+            let weeks = null;
+            if (weeksCol) weeks = parseWeeksString(String(row[weeksCol] || ''));
+            if (!weeks) weeks = generateAllWeeks();
             let location = locationCol ? String(row[locationCol] || '').trim() : '';
             const teacher = teacherCol ? String(row[teacherCol] || '').trim() : '';
-            if (teacher && !location) {
-                location = teacher;
-            } else if (teacher && location) {
-                location = `${location} (${teacher})`;
-            }
-
-            results.push({
-                title,
-                dayOfWeek,
-                startTime,
-                endTime,
-                location,
-                color: colorPalette[colorIdx % colorPalette.length],
-                isAiGenerated: false,
-            });
+            if (teacher && !location) location = teacher;
+            else if (teacher && location) location = `${location} (${teacher})`;
+            results.push({ title, dayOfWeek, startTime, endTime, weeks, location, color: colorPalette[colorIdx %
+                    colorPalette.length], isAiGenerated: false });
             colorIdx++;
         }
-
         pendingImportCourses = results;
     }
 
-    /** 解析 ICS 文件 */
     async function parseICSFile(file) {
         const text = await file.text();
-        // 展开折叠行
         const unfolded = text.replace(/\r?\n\s+/g, '');
         const lines = unfolded.split(/\r?\n/);
-
         const events = [];
         let currentEvent = null;
         let inVEvent = false;
-
         for (const line of lines) {
             const trimmed = line.trim();
-            if (trimmed === 'BEGIN:VEVENT') {
-                inVEvent = true;
-                currentEvent = {};
-            } else if (trimmed === 'END:VEVENT') {
-                inVEvent = false;
-                if (currentEvent && currentEvent.summary && currentEvent.startTime && currentEvent.endTime && currentEvent
-                    .dayOfWeek) {
-                    events.push(currentEvent);
-                }
-                currentEvent = null;
-            } else if (inVEvent && currentEvent) {
+            if (trimmed === 'BEGIN:VEVENT') { inVEvent = true;
+                currentEvent = {}; } else if (trimmed === 'END:VEVENT') { inVEvent = false; if (currentEvent && currentEvent
+                    .summary && currentEvent.startTime && currentEvent.endTime && currentEvent.dayOfWeek) { if (!currentEvent
+                        .weeks) currentEvent.weeks = generateAllWeeks();
+                    events.push(currentEvent); }
+                currentEvent = null; } else if (inVEvent && currentEvent) {
                 const colonIdx = trimmed.indexOf(':');
                 if (colonIdx === -1) continue;
                 const propName = trimmed.substring(0, colonIdx).toUpperCase();
                 const propValue = trimmed.substring(colonIdx + 1);
-
-                // 处理属性参数
                 let cleanPropName = propName.split(';')[0];
                 const params = {};
                 const paramParts = propName.split(';');
-                for (let i = 1; i < paramParts.length; i++) {
-                    const eqIdx = paramParts[i].indexOf('=');
-                    if (eqIdx !== -1) {
-                        params[paramParts[i].substring(0, eqIdx).toUpperCase()] = paramParts[i].substring(eqIdx + 1);
-                    }
-                }
-
-                if (cleanPropName === 'SUMMARY') {
-                    currentEvent.summary = propValue.replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\n/g, ' ').trim();
-                } else if (cleanPropName === 'LOCATION') {
-                    currentEvent.location = propValue.replace(/\\,/g, ',').trim();
-                } else if (cleanPropName === 'DTSTART') {
-                    const dt = parseICSTime(propValue, params);
-                    if (dt) {
-                        currentEvent.startTime = dt.timeStr;
-                        if (dt.dayOfWeek) currentEvent.dayOfWeek = dt.dayOfWeek;
-                    }
-                } else if (cleanPropName === 'DTEND') {
-                    const dt = parseICSTime(propValue, params);
-                    if (dt) {
-                        currentEvent.endTime = dt.timeStr;
-                        if (dt.dayOfWeek && !currentEvent.dayOfWeek) currentEvent.dayOfWeek = dt.dayOfWeek;
-                    }
-                } else if (cleanPropName === 'RRULE') {
-                    const bydayMatch = propValue.match(/BYDAY=([A-Z]{2})/i);
-                    if (bydayMatch && !currentEvent.dayOfWeek) {
-                        currentEvent.dayOfWeek = icsDayToNumber(bydayMatch[1]);
-                    }
-                }
+                for (let i = 1; i < paramParts.length; i++) { const eqIdx = paramParts[i].indexOf('='); if (eqIdx !== -
+                    1) params[paramParts[i].substring(0, eqIdx).toUpperCase()] = paramParts[i].substring(eqIdx +
+                    1); }
+                if (cleanPropName === 'SUMMARY') currentEvent.summary = propValue.replace(/\\,/g, ',').replace(/\\;/g,
+                    ';').replace(/\\n/g, ' ').trim();
+                else if (cleanPropName === 'LOCATION') currentEvent.location = propValue.replace(/\\,/g, ',').trim();
+                else if (cleanPropName === 'DTSTART') { const dt = parseICSTime(propValue, params); if (dt) { currentEvent
+                            .startTime = dt.timeStr; if (dt.dayOfWeek) currentEvent.dayOfWeek = dt.dayOfWeek; } } else if (
+                    cleanPropName === 'DTEND') { const dt = parseICSTime(propValue, params); if (dt) { currentEvent.endTime =
+                        dt.timeStr; if (dt.dayOfWeek && !currentEvent.dayOfWeek) currentEvent.dayOfWeek = dt
+                    .dayOfWeek; } } else if (cleanPropName === 'RRULE') { const bydayMatch = propValue.match(
+                    /BYDAY=([A-Z]{2})/i); if (bydayMatch && !currentEvent.dayOfWeek) currentEvent.dayOfWeek =
+                    icsDayToNumber(bydayMatch[1]); const countMatch = propValue.match(/COUNT=(\d+)/i); if (countMatch)
+                    currentEvent.weeks = generateAllWeeks().slice(0, Math.min(parseInt(countMatch[1]),
+                        TOTAL_WEEKS)); }
             }
         }
-
         const colorPalette = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#ec4899', '#06b6d4', '#f97316',
-            '#6366f1', '#14b8a6'
-        ];
-        const results = events.map((ev, idx) => ({
-            title: ev.summary || '未命名课程',
-            dayOfWeek: ev.dayOfWeek,
-            startTime: ev.startTime,
-            endTime: ev.endTime,
-            location: ev.location || '',
-            color: colorPalette[idx % colorPalette.length],
-            isAiGenerated: false,
-        }));
-
+            '#6366f1', '#14b8a6'];
+        const results = events.map((ev, idx) => ({ title: ev.summary || '未命名课程', dayOfWeek: ev.dayOfWeek, startTime: ev
+                .startTime, endTime: ev.endTime, weeks: ev.weeks || generateAllWeeks(), location: ev.location || '',
+            color: colorPalette[idx % colorPalette.length], isAiGenerated: false }));
         pendingImportCourses = results;
     }
 
-    /** 解析 ICS 时间字符串 */
     function parseICSTime(value, params) {
-        // 格式可能是：20260223T080000 或 20260223T080000Z
         const match = value.match(/^(\d{4})(\d{2})(\d{2})T(\d{2})(\d{2})(\d{2})Z?$/);
         if (match) {
-            const year = parseInt(match[1]);
-            const month = parseInt(match[2]) - 1;
-            const day = parseInt(match[3]);
-            const hours = String(parseInt(match[4])).padStart(2, '0');
-            const minutes = match[5];
+            const year = parseInt(match[1]),
+                month = parseInt(match[2]) - 1,
+                day = parseInt(match[3]);
+            const hours = String(parseInt(match[4])).padStart(2, '0'),
+                minutes = match[5];
             const date = new Date(year, month, day);
             const rawDay = date.getDay();
             const dayOfWeek = rawDay === 0 ? 7 : rawDay;
@@ -1030,123 +995,68 @@
         return null;
     }
 
-    /** ICS 星期缩写转数字 */
-    function icsDayToNumber(abbr) {
-        const map = { 'MO': 1, 'TU': 2, 'WE': 3, 'TH': 4, 'FR': 5, 'SA': 6, 'SU': 7 };
-        return map[abbr.toUpperCase()] || null;
-    }
+    function icsDayToNumber(abbr) { const map = { 'MO': 1, 'TU': 2, 'WE': 3, 'TH': 4, 'FR': 5, 'SA': 6, 'SU': 7 }; return map[
+            abbr.toUpperCase()] || null; }
 
-    /** 解析 CSV 文件 */
     async function parseCSVFile(file) {
         const text = await file.text();
         const lines = text.split(/\r?\n/).filter(l => l.trim());
-        if (lines.length < 2) {
-            throw new Error('CSV 文件数据不足');
-        }
-
-        // 解析表头
+        if (lines.length < 2) throw new Error('CSV 文件数据不足');
         const headers = parseCSVLine(lines[0]);
         const columnMap = {};
-        headers.forEach((h, i) => {
-            const type = identifyColumnType(h);
-            if (type) {
-                columnMap[type] = columnMap[type] || [];
-                columnMap[type].push(i);
-            }
-        });
-
-        const getColIdx = (type) => {
-            if (columnMap[type] && columnMap[type].length > 0) return columnMap[type][0];
-            return null;
-        };
-
-        const titleIdx = getColIdx('title');
-        const dayIdx = getColIdx('dayOfWeek');
-        const timeIdx = getColIdx('time');
-        const locationIdx = getColIdx('location');
-        const teacherIdx = getColIdx('teacher');
-        const startTimeIdx = getColIdx('startTime');
-        const endTimeIdx = getColIdx('endTime');
-
+        headers.forEach((h, i) => { const type = identifyColumnType(h); if (type) { if (!columnMap[type]) columnMap[
+                type] = []; columnMap[type].push(i); } });
+        const getColIdx = (type) => (columnMap[type] && columnMap[type].length > 0) ? columnMap[type][0] : null;
+        const titleIdx = getColIdx('title'),
+            dayIdx = getColIdx('dayOfWeek'),
+            timeIdx = getColIdx('time');
+        const locationIdx = getColIdx('location'),
+            teacherIdx = getColIdx('teacher');
+        const startTimeIdx = getColIdx('startTime'),
+            endTimeIdx = getColIdx('endTime'),
+            weeksIdx = getColIdx('weeks');
         const results = [];
         const colorPalette = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#ec4899', '#06b6d4', '#f97316',
-            '#6366f1', '#14b8a6'
-        ];
+            '#6366f1', '#14b8a6'];
         let colorIdx = 0;
-
         for (let i = 1; i < lines.length; i++) {
             const cols = parseCSVLine(lines[i]);
             const title = titleIdx !== null ? (cols[titleIdx] || '').trim() : '';
             if (!title) continue;
-
             let dayOfWeek = null;
-            if (dayIdx !== null) {
-                dayOfWeek = parseDayOfWeek(String(cols[dayIdx] || ''));
-            }
-
-            let startTime = null;
-            let endTime = null;
-
-            if (startTimeIdx !== null && endTimeIdx !== null) {
-                const st = String(cols[startTimeIdx] || '').trim();
-                const et = String(cols[endTimeIdx] || '').trim();
-                const timeResult = parseTimeRangeString(`${st}-${et}`);
-                if (timeResult) {
-                    startTime = timeResult.startTime;
-                    endTime = timeResult.endTime;
-                }
-            }
-
-            if (!startTime && timeIdx !== null) {
-                const timeVal = String(cols[timeIdx] || '').trim();
-                const timeResult = parseTimeColumn(timeVal);
-                if (timeResult) {
-                    startTime = timeResult.startTime;
-                    endTime = timeResult.endTime;
-                }
-            }
-
+            if (dayIdx !== null) dayOfWeek = parseDayOfWeek(String(cols[dayIdx] || ''));
+            let startTime = null,
+                endTime = null;
+            if (startTimeIdx !== null && endTimeIdx !== null) { const st = String(cols[startTimeIdx] || '').trim(),
+                    et = String(cols[endTimeIdx] || '').trim(); const timeResult = parseTimeRangeString(
+                    `${st}-${et}`); if (timeResult) { startTime = timeResult.startTime;
+                    endTime = timeResult.endTime; } }
+            if (!startTime && timeIdx !== null) { const timeResult = parseTimeColumn(String(cols[timeIdx] || '')); if (
+                    timeResult) { startTime = timeResult.startTime;
+                    endTime = timeResult.endTime; } }
             if (!startTime || !endTime) continue;
             if (!dayOfWeek) continue;
-
+            let weeks = null;
+            if (weeksIdx !== null) weeks = parseWeeksString(String(cols[weeksIdx] || ''));
+            if (!weeks) weeks = generateAllWeeks();
             let location = locationIdx !== null ? String(cols[locationIdx] || '').trim() : '';
             const teacher = teacherIdx !== null ? String(cols[teacherIdx] || '').trim() : '';
-            if (teacher && !location) {
-                location = teacher;
-            } else if (teacher && location) {
-                location = `${location} (${teacher})`;
-            }
-
-            results.push({
-                title,
-                dayOfWeek,
-                startTime,
-                endTime,
-                location,
-                color: colorPalette[colorIdx % colorPalette.length],
-                isAiGenerated: false,
-            });
+            if (teacher && !location) location = teacher;
+            else if (teacher && location) location = `${location} (${teacher})`;
+            results.push({ title, dayOfWeek, startTime, endTime, weeks, location, color: colorPalette[colorIdx %
+                    colorPalette.length], isAiGenerated: false });
             colorIdx++;
         }
-
         pendingImportCourses = results;
     }
 
-    /** 解析 CSV 行 */
     function parseCSVLine(line) {
         const result = [];
-        let current = '';
-        let inQuotes = false;
-        for (const char of line) {
-            if (char === '"') {
-                inQuotes = !inQuotes;
-            } else if (char === ',' && !inQuotes) {
-                result.push(current);
-                current = '';
-            } else {
-                current += char;
-            }
-        }
+        let current = '',
+            inQuotes = false;
+        for (const char of line) { if (char === '"') inQuotes = !inQuotes;
+            else if (char === ',' && !inQuotes) { result.push(current);
+                current = ''; } else current += char; }
         result.push(current);
         return result;
     }
@@ -1157,15 +1067,12 @@
         const tbody = document.getElementById('previewTableBody');
         const countBadge = document.getElementById('importCountBadge');
         const infoText = document.getElementById('importInfoText');
-
         panel.classList.remove('hidden');
         panel.classList.add('animate-slide-down');
         countBadge.textContent = `${pendingImportCourses.length} 条记录`;
         infoText.textContent = `来源文件：${importSourceFileName} | 当前课表已有 ${courses.length} 条记录`;
-
         const dayNames = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
         tbody.innerHTML = '';
-
         pendingImportCourses.forEach((c, idx) => {
             const tr = document.createElement('tr');
             tr.innerHTML = `
@@ -1174,292 +1081,181 @@
             <td>${dayNames[c.dayOfWeek] || '未知'}</td>
             <td class="font-mono text-[10px]">${c.startTime}</td>
             <td class="font-mono text-[10px]">${c.endTime}</td>
-            <td class="text-[10px] text-slate-500">${escapeHTML(c.location || '-')}</td>
-          `;
+            <td class="text-[10px]"><span class="week-badge">${weeksToDisplayString(c.weeks)}</span></td>
+            <td class="text-[10px] text-slate-500">${escapeHTML(c.location || '-')}</td>`;
             tbody.appendChild(tr);
         });
-
         lucide.createIcons();
     }
 
-    function closeImportPreview() {
-        document.getElementById('importPreviewPanel').classList.add('hidden');
+    function closeImportPreview() { document.getElementById('importPreviewPanel').classList.add('hidden');
         pendingImportCourses = [];
-        importSourceFileName = '';
-    }
+        importSourceFileName = ''; }
 
     function confirmImport() {
         const modeRadio = document.querySelector('input[name="importMode"]:checked');
         const mode = modeRadio ? modeRadio.value : 'merge';
-
-        if (mode === 'replace') {
-            courses = [];
-        }
-
-        // 为导入的课程生成唯一 ID
-        const importedCourses = pendingImportCourses.map(c => ({
-            ...c,
-            id: 'imp_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8),
-        }));
-
+        if (mode === 'replace') courses = [];
+        const importedCourses = pendingImportCourses.map(c => ({ ...c, id: 'imp_' + Date.now() + '_' + Math.random()
+                .toString(36).slice(2, 8) }));
         courses = [...courses, ...importedCourses];
         renderCoursesList();
         persistCourses();
         showToast(`成功导入 ${importedCourses.length} 条课程记录！`, 'success');
         triggerSuccessConfetti();
-
         closeImportPreview();
     }
 
-    function escapeHTML(str) {
-        const div = document.createElement('div');
-        div.textContent = str;
-        return div.innerHTML;
-    }
+    function escapeHTML(str) { const div = document.createElement('div');
+        div.textContent = str; return div.innerHTML; }
 
     // ==================== 导出功能 ====================
     function exportAsJSON() {
-        if (courses.length === 0) {
-            showToast('课表为空，无法导出', 'error');
-            return;
-        }
-        const exportData = {
-            version: '8.0',
-            exportDate: new Date().toISOString(),
-            semesterStart: SEMESTER_START.toISOString().split('T')[0],
-            courseCount: courses.length,
-            courses: courses.map(c => ({
-                title: c.title,
-                dayOfWeek: c.dayOfWeek,
-                startTime: c.startTime,
-                endTime: c.endTime,
-                location: c.location || '',
-                color: c.color,
-                isAiGenerated: c.isAiGenerated || false,
-            })),
-        };
-
+        if (courses.length === 0) { showToast('课表为空，无法导出', 'error'); return; }
+        const exportData = { version: '9.0', exportDate: new Date().toISOString(), semesterStart: SEMESTER_START
+                .toISOString().split('T')[0], totalWeeks: TOTAL_WEEKS, courseCount: courses.length,
+            courses: courses.map(c => ({ title: c.title, dayOfWeek: c.dayOfWeek, startTime: c.startTime, endTime: c
+                    .endTime, weeks: c.weeks || generateAllWeeks(), location: c.location || '', color: c.color,
+                isAiGenerated: c.isAiGenerated || false })) };
         const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
         downloadBlob(blob, `课表备份_${formatDateForFile(new Date())}.json`);
-        showToast('课表已导出为 JSON 文件', 'success');
+        showToast('课表已导出为 JSON 文件（含周次信息）', 'success');
     }
 
     function exportAsICS() {
-        if (courses.length === 0) {
-            showToast('课表为空，无法导出', 'error');
-            return;
-        }
-
+        if (courses.length === 0) { showToast('课表为空，无法导出', 'error'); return; }
         const monday = new Date(currentMonday);
-        let icsContent = [
-            'BEGIN:VCALENDAR',
-            'VERSION:2.0',
-            'PRODID:-//AI智能科研排程舱//WeekUp Style//CN',
-            'CALSCALE:GREGORIAN',
-            'METHOD:PUBLISH',
-            'X-WR-CALNAME:AI智能科研排程舱 - 课表',
-            'X-WR-TIMEZONE:Asia/Shanghai',
+        let icsContent = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//AI智能科研排程舱//WeekUp Style//CN',
+            'CALSCALE:GREGORIAN', 'METHOD:PUBLISH', 'X-WR-CALNAME:AI智能科研排程舱 - 课表', 'X-WR-TIMEZONE:Asia/Shanghai'
         ];
-
         courses.forEach(c => {
             const eventDate = new Date(monday);
             eventDate.setDate(monday.getDate() + c.dayOfWeek - 1);
             const dateStr = formatICSDate(eventDate);
-            const startHour = c.startTime.split(':')[0];
-            const startMin = c.startTime.split(':')[1];
-            const endHour = c.endTime.split(':')[0];
-            const endMin = c.endTime.split(':')[1];
-
-            const dtStart = `${dateStr}T${startHour}${startMin}00`;
-            const dtEnd = `${dateStr}T${endHour}${endMin}00`;
+            const dtStart = `${dateStr}T${c.startTime.replace(':','')}00`;
+            const dtEnd = `${dateStr}T${c.endTime.replace(':','')}00`;
             const uid = `course-${c.id}-${Date.now()}@ai-planner`;
-
             const dayAbbrs = ['', 'MO', 'TU', 'WE', 'TH', 'FR', 'SA', 'SU'];
-            const rrule = `FREQ=WEEKLY;BYDAY=${dayAbbrs[c.dayOfWeek] || 'MO'}`;
-
-            icsContent.push('BEGIN:VEVENT');
-            icsContent.push(`UID:${uid}`);
-            icsContent.push(`DTSTART:${dtStart}`);
-            icsContent.push(`DTEND:${dtEnd}`);
-            icsContent.push(`RRULE:${rrule}`);
-            icsContent.push(`SUMMARY:${escapeICSText(c.title)}`);
-            if (c.location) {
-                icsContent.push(`LOCATION:${escapeICSText(c.location)}`);
-            }
+            const weekCount = (c.weeks && c.weeks.length > 0) ? c.weeks.length : TOTAL_WEEKS;
+            const rrule = `FREQ=WEEKLY;BYDAY=${dayAbbrs[c.dayOfWeek] || 'MO'};COUNT=${weekCount}`;
+            icsContent.push('BEGIN:VEVENT', `UID:${uid}`, `DTSTART:${dtStart}`, `DTEND:${dtEnd}`,
+                `RRULE:${rrule}`, `SUMMARY:${escapeICSText(c.title)}`);
+            if (c.location) icsContent.push(`LOCATION:${escapeICSText(c.location)}`);
             icsContent.push('END:VEVENT');
         });
-
         icsContent.push('END:VCALENDAR');
-
         const blob = new Blob([icsContent.join('\r\n')], { type: 'text/calendar;charset=utf-8' });
         downloadBlob(blob, `课表_${formatDateForFile(new Date())}.ics`);
         showToast('课表已导出为 ICS (iCalendar) 文件', 'success');
     }
 
-    function formatICSDate(date) {
-        const y = date.getFullYear();
-        const m = String(date.getMonth() + 1).padStart(2, '0');
-        const d = String(date.getDate()).padStart(2, '0');
-        return `${y}${m}${d}`;
-    }
+    function formatICSDate(date) { const y = date.getFullYear(),
+            m = String(date.getMonth() + 1).padStart(2, '0'),
+            d = String(date.getDate()).padStart(2, '0'); return `${y}${m}${d}`; }
 
-    function escapeICSText(text) {
-        return text.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\n/g, '\\n');
-    }
+    function escapeICSText(text) { return text.replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(
+        /\n/g, '\\n'); }
 
-    function formatDateForFile(date) {
-        const y = date.getFullYear();
-        const m = String(date.getMonth() + 1).padStart(2, '0');
-        const d = String(date.getDate()).padStart(2, '0');
-        return `${y}${m}${d}`;
-    }
+    function formatDateForFile(date) { const y = date.getFullYear(),
+            m = String(date.getMonth() + 1).padStart(2, '0'),
+            d = String(date.getDate()).padStart(2, '0'); return `${y}${m}${d}`; }
 
-    function downloadBlob(blob, filename) {
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+    function downloadBlob(blob, filename) { const url = URL.createObjectURL(blob); const a = document.createElement(
+        'a');
         a.href = url;
         a.download = filename;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-    }
+        URL.revokeObjectURL(url); }
 
     // ==================== API 配置 ====================
-    function getApiConfig() {
-        return {
-            baseUrl: document.getElementById('apiBaseUrl').value.trim(),
-            model: document.getElementById('modelName').value.trim(),
-            key: document.getElementById('apiKey').value.trim()
-        };
-    }
+    function getApiConfig() { return { baseUrl: document.getElementById('apiBaseUrl').value.trim(), model: document
+                .getElementById('modelName').value.trim(), key: document.getElementById('apiKey').value.trim() }; }
 
-    function toggleApiSettings() {
-        const panel = document.getElementById('apiPanel');
-        panel.classList.toggle('hidden');
-        if (!panel.classList.contains('hidden')) {
-            panel.classList.add('animate-slide-down');
-        }
-    }
+    function toggleApiSettings() { const panel = document.getElementById('apiPanel');
+        panel.classList.toggle('hidden'); if (!panel.classList.contains('hidden')) panel.classList.add(
+        'animate-slide-down'); }
 
-    function checkNetworkStatusDisplay() {
-        const statusEl = document.getElementById('networkStatus');
-        if (localStorage.getItem('apiKey')) {
-            statusEl.classList.remove('hidden');
-        } else {
-            statusEl.classList.add('hidden');
-        }
-    }
+    function checkNetworkStatusDisplay() { const statusEl = document.getElementById('networkStatus'); if (localStorage.getItem(
+            'apiKey')) statusEl.classList.remove('hidden');
+        else statusEl.classList.add('hidden'); }
 
-    function saveApiKeys() {
-        localStorage.setItem('apiBaseUrl', document.getElementById('apiBaseUrl').value.trim());
+    function saveApiKeys() { localStorage.setItem('apiBaseUrl', document.getElementById('apiBaseUrl').value.trim());
         localStorage.setItem('modelName', document.getElementById('modelName').value.trim());
         localStorage.setItem('apiKey', document.getElementById('apiKey').value.trim());
         checkNetworkStatusDisplay();
         showToast('网关配置已保存！', 'success');
-        toggleApiSettings();
-    }
+        toggleApiSettings(); }
 
     async function testApiKey() {
         const config = getApiConfig();
-        if (!config.baseUrl || !config.key) {
-            showErrorAlert(true, '请填写完整的 Base URL 和 API Key');
-            return;
-        }
+        if (!config.baseUrl || !config.key) { showErrorAlert(true, '请填写完整的 Base URL 和 API Key'); return; }
         const btn = document.getElementById('testKeyBtn');
         const originalHTML = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = '<i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin"></i><span>Ping...</span>';
         lucide.createIcons();
-
         try {
-            const response = await axios.post(config.baseUrl, {
-                model: config.model || undefined,
-                messages: [{ role: 'user', content: 'ping' }],
-                max_tokens: 5
-            }, {
-                headers: {
-                    "Authorization": `Bearer ${config.key}`,
-                    "Content-Type": "application/json"
-                },
-                timeout: 15000
-            });
+            const response = await axios.post(config.baseUrl, { model: config.model || undefined, messages: [{ role: 'user',
+                    content: 'ping'
+                }], max_tokens: 5 }, { headers: { "Authorization": `Bearer ${config.key}`,
+                    "Content-Type": "application/json" }, timeout: 15000 });
             showToast('连通测试成功！端点响应正常。', 'success');
             showErrorAlert(false);
         } catch (err) {
             let errMsg = '测试失败：';
-            if (err.response) {
-                errMsg += `HTTP ${err.response.status} - ${JSON.stringify(err.response.data).slice(0, 120)}`;
-            } else if (err.code === 'ECONNABORTED') {
-                errMsg += '请求超时，请检查网络或端点地址';
-            } else {
-                errMsg += err.message.slice(0, 150);
-            }
+            if (err.response) errMsg += `HTTP ${err.response.status} - ${JSON.stringify(err.response.data).slice(0,120)}`;
+            else if (err.code === 'ECONNABORTED') errMsg += '请求超时，请检查网络或端点地址';
+            else errMsg += err.message.slice(0, 150);
             showErrorAlert(true, errMsg);
-        } finally {
-            btn.disabled = false;
+        } finally { btn.disabled = false;
             btn.innerHTML = originalHTML;
-            lucide.createIcons();
-        }
+            lucide.createIcons(); }
     }
 
     // ==================== 周选择器逻辑 ====================
     function populateWeekSelector() {
         const selector = document.getElementById('weekSelector');
         selector.innerHTML = '<option value="">请选择周</option>';
-
-        const totalWeeks = 24;
-        for (let i = 0; i < totalWeeks; i++) {
+        for (let i = 0; i < TOTAL_WEEKS; i++) {
             const weekMonday = new Date(SEMESTER_START);
             weekMonday.setDate(SEMESTER_START.getDate() + i * 7);
             const weekSunday = new Date(weekMonday);
             weekSunday.setDate(weekMonday.getDate() + 6);
-
             const weekNum = i + 1;
-            const mondayStr = formatDateShort(weekMonday);
-            const sundayStr = formatDateShort(weekSunday);
-
+            const mondayStr = formatDateShort(weekMonday),
+                sundayStr = formatDateShort(weekSunday);
             const option = document.createElement('option');
             option.value = weekMonday.toISOString().split('T')[0];
             option.textContent = `第${weekNum}周 (${mondayStr} - ${sundayStr})`;
             option.className = 'week-selector-option';
-
-            if (isSameDay(weekMonday, currentMonday)) {
-                option.selected = true;
-                option.className += ' current-week';
-            }
-
+            if (isSameDay(weekMonday, currentMonday)) { option.selected = true;
+                option.className += ' current-week'; }
             selector.appendChild(option);
         }
-
         const thisMonday = new Date(currentMonday);
         const foundOption = selector.querySelector(`option[value="${thisMonday.toISOString().split('T')[0]}"]`);
-        if (!foundOption) {
-            const opt = document.createElement('option');
+        if (!foundOption) { const opt = document.createElement('option');
             opt.value = thisMonday.toISOString().split('T')[0];
             opt.textContent =
-                `本周 (${formatDateShort(thisMonday)} - ${formatDateShort(new Date(thisMonday.getTime() + 6 * 86400000))})`;
+                `本周 (${formatDateShort(thisMonday)} - ${formatDateShort(new Date(thisMonday.getTime() + 6*86400000))})`;
             opt.selected = true;
             opt.className = 'week-selector-option current-week';
-            selector.appendChild(opt);
-        }
+            selector.appendChild(opt); }
     }
 
     function goToWeek(mondayStr) {
         if (!mondayStr || !calendarInstance) return;
-
         const parts = mondayStr.split('-');
         if (parts.length !== 3) return;
-
         currentMonday = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2]));
         currentMonday.setHours(0, 0, 0, 0);
-
         refreshCalendarEvents();
         calendarInstance.gotoDate(currentMonday);
         updateCurrentWeekLabel();
         updateWeekSelectorSelection();
         renderCoursesList();
-
         showToast(`已切换至第${getWeekNumber(currentMonday)}周`, 'success');
     }
 
@@ -1470,7 +1266,6 @@
         const thisMonday = new Date(today);
         thisMonday.setDate(today.getDate() + diff);
         thisMonday.setHours(0, 0, 0, 0);
-
         currentMonday = thisMonday;
         refreshCalendarEvents();
         calendarInstance.gotoDate(currentMonday);
@@ -1480,25 +1275,15 @@
         showToast('已回到本周', 'success');
     }
 
-    function getWeekNumber(monday) {
-        const diffDays = Math.round((monday.getTime() - SEMESTER_START.getTime()) / 86400000);
-        return Math.floor(diffDays / 7) + 1;
-    }
-
     function updateWeekSelectorSelection() {
         const selector = document.getElementById('weekSelector');
         const targetValue = currentMonday.toISOString().split('T')[0];
         const options = selector.querySelectorAll('option');
         let found = false;
-        options.forEach(opt => {
-            if (opt.value === targetValue) {
-                opt.selected = true;
-                found = true;
-            }
-        });
-        if (!found && selector.querySelector(`option[value="${targetValue}"]`)) {
-            selector.querySelector(`option[value="${targetValue}"]`).selected = true;
-        }
+        options.forEach(opt => { if (opt.value === targetValue) { opt.selected = true;
+                found = true; } });
+        if (!found) { const matchingOpt = selector.querySelector(`option[value="${targetValue}"]`); if (matchingOpt)
+                matchingOpt.selected = true; }
     }
 
     function updateCurrentWeekLabel() {
@@ -1510,21 +1295,16 @@
         label.classList.remove('hidden');
     }
 
-    function formatDateShort(date) {
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${month}/${day}`;
-    }
+    function formatDateShort(date) { const month = String(date.getMonth() + 1).padStart(2, '0'),
+            day = String(date.getDate()).padStart(2, '0'); return `${month}/${day}`; }
 
-    function isSameDay(d1, d2) {
-        return d1.getFullYear() === d2.getFullYear() &&
-            d1.getMonth() === d2.getMonth() &&
-            d1.getDate() === d2.getDate();
-    }
+    function isSameDay(d1, d2) { return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1
+            .getDate() === d2.getDate(); }
 
     // ==================== 课程数据持久化 ====================
     function persistCourses() {
-        localStorage.setItem('courses', JSON.stringify(courses || []));
+        const toSave = courses.map(c => ({ ...c, weeks: c.weeks || generateAllWeeks() }));
+        localStorage.setItem('courses', JSON.stringify(toSave));
     }
 
     function loadCoursesFromStorage() {
@@ -1533,12 +1313,11 @@
             if (raw) {
                 const parsed = JSON.parse(raw);
                 if (Array.isArray(parsed) && parsed.length > 0) {
-                    courses = parsed;
+                    courses = parsed.map(c => ({ ...c, weeks: c.weeks && c.weeks.length > 0 ? c.weeks :
+                            generateAllWeeks() }));
                 }
             }
-        } catch (e) {
-            console.warn('课程数据读取失败，使用默认数据', e);
-        }
+        } catch (e) { console.warn('课程数据读取失败，使用默认数据', e); }
     }
 
     // ==================== 日历核心 ====================
@@ -1546,11 +1325,7 @@
         const calendarEl = document.getElementById('calendar');
         calendarInstance = new FullCalendar.Calendar(calendarEl, {
             initialView: 'timeGridWeek',
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'timeGridWeek,timeGridDay'
-            },
+            headerToolbar: { left: 'prev,next today', center: 'title', right: 'timeGridWeek,timeGridDay' },
             firstDay: 1,
             slotMinTime: '07:00:00',
             slotMaxTime: '23:30:00',
@@ -1562,34 +1337,21 @@
             nowIndicator: true,
             height: '100%',
             expandRows: true,
-
-            select: function(info) {
-                openAddCourseForm(null, info.start, info.end);
-                calendarInstance.unselect();
-            },
-            eventClick: function(info) {
-                openAddCourseForm(info.event.id);
-            },
-            eventDrop: function(info) {
-                handleSync(info.event);
-            },
-            eventResize: function(info) {
-                handleSync(info.event);
-            },
-
+            select: function(info) { openAddCourseForm(null, info.start, info.end);
+                calendarInstance.unselect(); },
+            eventClick: function(info) { openAddCourseForm(info.event.id); },
+            eventDrop: function(info) { handleSync(info.event); },
+            eventResize: function(info) { handleSync(info.event); },
             events: getMappedEvents(),
             eventContent: function(arg) {
                 const isAi = arg.event.extendedProps.isAiGenerated;
                 const loc = arg.event.extendedProps.location || '';
                 const aiBadge = isAi ? '✨ ' : '';
                 const locBadge = loc ? `<div class="opacity-75 text-[8px] mt-0.5">📍 ${loc}</div>` : '';
-                return {
-                    html: `<div class="p-1.5 h-full flex flex-col justify-between text-white text-[11px] leading-snug cursor-pointer">
-                <div class="font-bold truncate">${aiBadge}${arg.event.title}</div>
-                <div class="opacity-85 font-mono text-[9px] mt-1">${arg.timeText}</div>
-                ${locBadge}
-              </div>`
-                };
+                return { html: `<div class="p-1.5 h-full flex flex-col justify-between text-white text-[11px] leading-snug cursor-pointer">
+              <div class="font-bold truncate">${aiBadge}${arg.event.title}</div>
+              <div class="opacity-85 font-mono text-[9px] mt-1">${arg.timeText}</div>
+              ${locBadge}</div>` };
             }
         });
         calendarInstance.render();
@@ -1598,34 +1360,30 @@
     function getMappedEvents() {
         if (!currentMonday) initCurrentMonday();
         const monday = new Date(currentMonday);
-
-        return courses.map(c => {
-            const eventDate = new Date(monday);
-            eventDate.setDate(monday.getDate() + c.dayOfWeek - 1);
-
-            const startParts = c.startTime.split(':').map(Number);
-            const endParts = c.endTime.split(':').map(Number);
-
-            const start = new Date(eventDate);
-            start.setHours(startParts[0], startParts[1], 0, 0);
-            const end = new Date(eventDate);
-            end.setHours(endParts[0], endParts[1], 0, 0);
-
-            return {
-                id: c.id,
-                title: c.title,
-                start: start.toISOString(),
-                end: end.toISOString(),
-                backgroundColor: c.color,
-                borderColor: c.color,
-                textColor: '#ffffff',
-                extendedProps: {
-                    isAiGenerated: c.isAiGenerated || false,
-                    location: c.location || '',
-                    dayOfWeek: c.dayOfWeek
-                }
-            };
-        });
+        const weekNum = getWeekNumber(monday);
+        return courses
+            .filter(c => courseActiveInWeek(c, weekNum))
+            .map(c => {
+                const eventDate = new Date(monday);
+                eventDate.setDate(monday.getDate() + c.dayOfWeek - 1);
+                const startParts = c.startTime.split(':').map(Number);
+                const endParts = c.endTime.split(':').map(Number);
+                const start = new Date(eventDate);
+                start.setHours(startParts[0], startParts[1], 0, 0);
+                const end = new Date(eventDate);
+                end.setHours(endParts[0], endParts[1], 0, 0);
+                return {
+                    id: c.id,
+                    title: c.title,
+                    start: start.toISOString(),
+                    end: end.toISOString(),
+                    backgroundColor: c.color,
+                    borderColor: c.color,
+                    textColor: '#ffffff',
+                    extendedProps: { isAiGenerated: c.isAiGenerated || false, location: c.location || '',
+                        dayOfWeek: c.dayOfWeek, weeks: c.weeks }
+                };
+            });
     }
 
     function refreshCalendarEvents() {
@@ -1640,10 +1398,7 @@
         const pad = v => String(v).padStart(2, '0');
         const startTime = `${pad(fcEvent.start.getHours())}:${pad(fcEvent.start.getMinutes())}`;
         const endTime = `${pad(fcEvent.end.getHours())}:${pad(fcEvent.end.getMinutes())}`;
-
-        courses = courses.map(c =>
-            c.id === fcEvent.id ? { ...c, dayOfWeek, startTime, endTime } : c
-        );
+        courses = courses.map(c => c.id === fcEvent.id ? { ...c, dayOfWeek, startTime, endTime } : c);
         renderCoursesList();
         persistCourses();
         showToast('时间已自动吸附同步', 'success');
@@ -1656,9 +1411,7 @@
         const modalTitle = document.getElementById('modalTitle');
         panel.classList.remove('hidden');
         panel.classList.add('animate-slide-down');
-
         const pad = v => String(v).padStart(2, '0');
-
         if (id) {
             const c = courses.find(x => x.id === id);
             if (c) {
@@ -1668,6 +1421,7 @@
                 document.getElementById('newEnd').value = c.endTime;
                 document.getElementById('newLocation').value = c.location || '';
                 document.getElementById('newColor').value = c.color || '#4f46e5';
+                document.getElementById('newWeeks').value = weeksToDisplayString(c.weeks);
                 panel.dataset.editId = id;
                 delBtn.classList.remove('hidden');
                 modalTitle.textContent = '编辑数据节点';
@@ -1676,10 +1430,10 @@
             document.getElementById('newTitle').value = '';
             document.getElementById('newLocation').value = '';
             document.getElementById('newColor').value = '#4f46e5';
+            document.getElementById('newWeeks').value = '';
             delete panel.dataset.editId;
             delBtn.classList.add('hidden');
             modalTitle.textContent = '新建数据节点';
-
             if (startDt && endDt) {
                 const rawDay = startDt.getDay();
                 const day = rawDay === 0 ? 7 : rawDay;
@@ -1694,9 +1448,7 @@
         }
     }
 
-    function closeAddCourseForm() {
-        document.getElementById('addCoursePanel').classList.add('hidden');
-    }
+    function closeAddCourseForm() { document.getElementById('addCoursePanel').classList.add('hidden'); }
 
     function saveNewCourse() {
         const panel = document.getElementById('addCoursePanel');
@@ -1707,35 +1459,16 @@
         const dayOfWeek = parseInt(document.getElementById('newDay').value);
         const location = document.getElementById('newLocation').value.trim();
         const color = document.getElementById('newColor').value;
-
-        if (!title) {
-            showToast('请填写事件名称', 'error');
-            return;
-        }
-        if (startTime >= endTime) {
-            showToast('结束时间必须晚于开始时间', 'error');
-            return;
-        }
-
-        const data = {
-            title,
-            dayOfWeek,
-            startTime,
-            endTime,
-            location,
-            color,
-            isAiGenerated: false
-        };
-
-        if (editId) {
-            courses = courses.map(c => c.id === editId ? { ...c, ...data, id: editId } : c);
-            showToast('日程已更新', 'success');
-        } else {
-            const newId = 'node_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
+        const weeksInput = document.getElementById('newWeeks').value.trim();
+        if (!title) { showToast('请填写事件名称', 'error'); return; }
+        if (startTime >= endTime) { showToast('结束时间必须晚于开始时间', 'error'); return; }
+        const weeks = parseWeeksString(weeksInput);
+        const data = { title, dayOfWeek, startTime, endTime, weeks, location, color, isAiGenerated: false };
+        if (editId) { courses = courses.map(c => c.id === editId ? { ...c, ...data, id: editId } : c);
+            showToast('日程已更新', 'success'); } else { const newId = 'node_' + Date.now() + '_' + Math.random().toString(
+                36).slice(2, 6);
             courses.push({ ...data, id: newId });
-            showToast('新日程已创建', 'success');
-        }
-
+            showToast('新日程已创建', 'success'); }
         closeAddCourseForm();
         renderCoursesList();
         persistCourses();
@@ -1744,87 +1477,128 @@
     function deleteFromModal() {
         const panel = document.getElementById('addCoursePanel');
         const editId = panel.dataset.editId;
-        if (editId) {
-            if (confirm('确定要删除此日程事件吗？此操作不可撤销。')) {
-                deleteCourse(editId);
+        if (editId) { if (confirm('确定要删除此日程事件吗？此操作不可撤销。')) { deleteCourse(editId);
                 closeAddCourseForm();
-                showToast('日程已删除', 'success');
-            }
-        }
+                showToast('日程已删除', 'success'); } }
     }
 
-    function deleteCourse(id) {
-        courses = courses.filter(c => c.id !== id);
+    function deleteCourse(id) { courses = courses.filter(c => c.id !== id);
         renderCoursesList();
-        persistCourses();
-    }
+        persistCourses(); }
 
     function clearAllEvents() {
-        if (courses.length === 0) {
-            showToast('课程列表已为空', 'error');
-            return;
-        }
-        if (confirm(`确定要清空全部 ${courses.length} 个日程事件吗？\n此操作不可撤销！`)) {
-            courses = [];
+        if (courses.length === 0) { showToast('课程列表已为空', 'error'); return; }
+        if (confirm(`确定要清空全部 ${courses.length} 个日程事件吗？\n此操作不可撤销！`)) { courses = [];
             renderCoursesList();
             persistCourses();
-            showToast('所有日程已清空', 'success');
-        }
+            showToast('所有日程已清空', 'success'); }
     }
 
     // ==================== 课程列表渲染 ====================
+    function getFilteredCourses() {
+        const weekNum = getCurrentWeekNumber();
+        let result = [...courses];
+        // 搜索过滤
+        const searchQuery = document.getElementById('courseSearch')?.value?.trim().toLowerCase() || '';
+        if (searchQuery) result = result.filter(c => c.title.toLowerCase().includes(searchQuery));
+        // 星期过滤
+        const dayFilter = document.getElementById('courseDayFilter')?.value || 'all';
+        if (dayFilter !== 'all') result = result.filter(c => c.dayOfWeek === parseInt(dayFilter));
+        // 仅本周
+        const thisWeekOnly = document.getElementById('courseThisWeekOnly')?.checked || false;
+        if (thisWeekOnly) result = result.filter(c => courseActiveInWeek(c, weekNum));
+        return { filtered: result, weekNum };
+    }
+
     function renderCoursesList() {
         const ctn = document.getElementById('coursesList');
         const countEl = document.getElementById('courseCount');
+        const statsBar = document.getElementById('courseStatsBar');
+        const filteredEl = document.getElementById('filteredCount');
         ctn.innerHTML = '';
+        const { filtered, weekNum } = getFilteredCourses();
+        const groupByDay = document.getElementById('courseGroupByDay')?.checked || false;
+        const aiCount = courses.filter(c => c.isAiGenerated).length;
+        const importCount = courses.filter(c => c.id && c.id.startsWith('imp_')).length;
+        const activeInWeek = courses.filter(c => courseActiveInWeek(c, weekNum)).length;
+
+        // 更新统计条
+        if (courses.length > 0 && statsBar) {
+            statsBar.classList.remove('hidden');
+            let statsParts = [`共${courses.length}门`, `本周${activeInWeek}门`];
+            if (aiCount > 0) statsParts.push(`AI:${aiCount}门`);
+            if (importCount > 0) statsParts.push(`导入:${importCount}门`);
+            if (filtered.length !== courses.length) statsParts.push(`筛选:${filtered.length}门`);
+            statsBar.innerHTML = statsParts.map(s => `<span class="bg-slate-100 px-1.5 py-0.5 rounded-full">${s}</span>`).join('');
+        } else if (statsBar) {
+            statsBar.classList.add('hidden');
+        }
 
         if (!courses.length) {
             ctn.innerHTML = `<div class="text-center py-6 text-slate-400">
           <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-40"></i>
-          <p class="text-xs">空画布 — 在日历上拖拽框选或点击"新增"来创建第一个日程</p>
-        </div>`;
+          <p class="text-xs">空画布 — 在日历上拖拽框选或点击"新增"来创建第一个日程</p></div>`;
             lucide.createIcons();
             countEl.textContent = '(0)';
+            if (filteredEl) filteredEl.classList.add('hidden');
         } else {
             countEl.textContent = `(${courses.length})`;
-            const sorted = [...courses].sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b
-                .startTime));
-            sorted.forEach(c => {
-                const dayNames = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-                const dayName = dayNames[c.dayOfWeek] || '未知';
-                const aiTag = c.isAiGenerated ?
-                    '<span class="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold ml-1">AI</span>' :
-                    '';
-                const importTag = c.id && c.id.startsWith('imp_') ?
-                    '<span class="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold ml-1">导入</span>' :
-                    '';
+            if (filteredEl) {
+                if (filtered.length !== courses.length) {
+                    filteredEl.textContent = `| 显示: ${filtered.length}`;
+                    filteredEl.classList.remove('hidden');
+                } else { filteredEl.classList.add('hidden'); }
+            }
+            const sorted = [...filtered].sort((a, b) => a.dayOfWeek - b.dayOfWeek || a.startTime.localeCompare(b.startTime));
 
-                const div = document.createElement('div');
-                div.className =
-                    'p-2.5 border border-slate-100 rounded-xl flex justify-between items-center bg-slate-50 hover:bg-white hover:border-slate-200 transition-all cursor-pointer group';
-                div.innerHTML = `
+            if (groupByDay) {
+                // 按天分组渲染
+                const dayNames = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+                for (let d = 1; d <= 7; d++) {
+                    const dayCourses = sorted.filter(c => c.dayOfWeek === d);
+                    if (dayCourses.length === 0) continue;
+                    const dayHeader = document.createElement('div');
+                    dayHeader.className = 'text-[10px] font-bold text-slate-500 px-2 py-1 bg-slate-100 rounded-lg flex items-center gap-2';
+                    dayHeader.innerHTML = `<i data-lucide="calendar" class="w-3 h-3"></i>${dayNames[d]} <span class="text-slate-400 font-normal">(${dayCourses.length}门)</span>`;
+                    ctn.appendChild(dayHeader);
+                    dayCourses.forEach(c => renderCourseCard(c, ctn, weekNum));
+                }
+            } else {
+                sorted.forEach(c => renderCourseCard(c, ctn, weekNum));
+            }
+            lucide.createIcons();
+        }
+        refreshCalendarEvents();
+    }
+
+    function renderCourseCard(c, ctn, weekNum) {
+        const dayNames = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+        const dayName = dayNames[c.dayOfWeek] || '未知';
+        const isActive = courseActiveInWeek(c, weekNum);
+        const aiTag = c.isAiGenerated ?
+            '<span class="text-[9px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full font-bold ml-1">AI</span>' : '';
+        const importTag = c.id && c.id.startsWith('imp_') ?
+            '<span class="text-[9px] bg-emerald-100 text-emerald-700 px-1.5 py-0.5 rounded-full font-bold ml-1">导入</span>' : '';
+        const weekStr = weeksToDisplayString(c.weeks);
+        const weekBadgeClass = c.isAiGenerated ? 'week-badge ai-week' : (c.id && c.id.startsWith('imp_') ? 'week-badge import-week' : 'week-badge');
+        const inactiveStyle = isActive ? '' : 'opacity-50';
+        const div = document.createElement('div');
+        div.className = `p-2.5 border border-slate-100 rounded-xl flex justify-between items-center bg-slate-50 hover:bg-white hover:border-slate-200 transition-all cursor-pointer group ${inactiveStyle}`;
+        div.innerHTML = `
             <div class="flex items-center gap-2.5 truncate flex-1 min-w-0">
               <div class="w-2.5 h-2.5 rounded-full flex-shrink-0 shadow-sm" style="background-color:${c.color}"></div>
               <div class="truncate min-w-0 flex-1">
-                <p class="text-[11px] font-bold text-slate-700 truncate flex items-center gap-1">${c.title}${aiTag}${importTag}</p>
+                <p class="text-[11px] font-bold text-slate-700 truncate flex items-center gap-1 flex-wrap">${c.title}${aiTag}${importTag}${!isActive ? '<span class="text-[9px] text-slate-400 font-normal">(本周无课)</span>' : ''}</p>
                 <p class="text-[9px] text-slate-400 font-mono">${dayName} · ${c.startTime}-${c.endTime}${c.location ? ' · ' + c.location : ''}</p>
+                <span class="${weekBadgeClass} mt-1">${weekStr}</span>
               </div>
             </div>
             <div class="flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity flex-shrink-0">
-              <button onclick="event.stopPropagation(); openAddCourseForm('${c.id}')" class="text-slate-400 hover:text-indigo-600 p-1.5 rounded-lg hover:bg-indigo-50 transition-all" title="编辑">
-                <i data-lucide="edit" class="w-3 h-3"></i>
-              </button>
-              <button onclick="event.stopPropagation(); if(confirm('删除此日程？')){deleteCourse('${c.id}');showToast('已删除','success');}" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-all" title="删除">
-                <i data-lucide="trash-2" class="w-3 h-3"></i>
-              </button>
+              <button onclick="event.stopPropagation(); openAddCourseForm('${c.id}')" class="text-slate-400 hover:text-indigo-600 p-1.5 rounded-lg hover:bg-indigo-50 transition-all" title="编辑"><i data-lucide="edit" class="w-3 h-3"></i></button>
+              <button onclick="event.stopPropagation(); if(confirm('删除此日程？')){deleteCourse('${c.id}');showToast('已删除','success');}" class="text-slate-400 hover:text-rose-600 p-1.5 rounded-lg hover:bg-rose-50 transition-all" title="删除"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
             </div>`;
-                div.addEventListener('click', () => openAddCourseForm(c.id));
-                ctn.appendChild(div);
-            });
-            lucide.createIcons();
-        }
-
-        refreshCalendarEvents();
+        div.addEventListener('click', () => openAddCourseForm(c.id));
+        ctn.appendChild(div);
     }
 
     // ==================== AI 排程引擎 ====================
@@ -1834,125 +1608,97 @@
         const config = getApiConfig();
         const btn = document.getElementById('planBtn');
         const btnText = document.getElementById('planBtnText');
-
-        if (!goal) {
-            showToast('请描述您要安排的任务', 'error');
-            return;
-        }
-
+        if (!goal) { showToast('请描述您要安排的任务', 'error'); return; }
         btn.disabled = true;
         btn.classList.add('opacity-70');
         btnText.innerHTML =
             '<i data-lucide="loader-2" class="w-4 h-4 animate-spin inline-block mr-2"></i> 推理计算中...';
         lucide.createIcons();
-
-        if (!config.key || !config.baseUrl) {
-            await simulateDemoPlanning(goal, btn, btnText);
-            return;
-        }
-
+        if (!config.key || !config.baseUrl) { await simulateDemoPlanning(goal, btn, btnText); return; }
         const systemPrompt = buildAiSystemPrompt(goal);
-
         try {
-            const response = await axios.post(config.baseUrl, {
-                model: config.model || undefined,
-                messages: [
-                    { role: 'system', content: systemPrompt },
-                    { role: 'user', content: goal }
-                ],
-                temperature: 0.15,
-                max_tokens: 3000
-            }, {
-                headers: {
-                    "Content-Type": "application/json",
-                    "Authorization": `Bearer ${config.key}`
-                },
-                timeout: 60000
-            });
-
+            const response = await axios.post(config.baseUrl, { model: config.model || undefined, messages: [{ role: 'system',
+                    content: systemPrompt }, { role: 'user', content: goal }], temperature: 0.15,
+                max_tokens: 4000 }, { headers: { "Content-Type": "application/json", "Authorization": `Bearer ${config.key}` },
+                timeout: 60000 });
             const rawContent = response.data.choices[0].message.content;
             processAiResponse(rawContent, goal);
         } catch (err) {
             let errMsg = 'AI 调用失败：';
-            if (err.response) {
-                errMsg += `HTTP ${err.response.status}`;
-                if (err.response.data?.error?.message) errMsg += ` - ${err.response.data.error.message}`;
-            } else if (err.code === 'ECONNABORTED') {
-                errMsg += '请求超时（60秒），请检查网络或简化需求';
-            } else {
-                errMsg += err.message.slice(0, 200);
-            }
+            if (err.response) { errMsg += `HTTP ${err.response.status}`; if (err.response.data?.error?.message) errMsg +=
+                    ` - ${err.response.data.error.message}`; } else if (err.code === 'ECONNABORTED') errMsg +=
+                '请求超时（60秒），请检查网络或简化需求';
+            else errMsg += err.message.slice(0, 200);
             showErrorAlert(true, errMsg);
             document.getElementById('thinkingBox').classList.add('hidden');
-        } finally {
-            btn.disabled = false;
+        } finally { btn.disabled = false;
             btn.classList.remove('opacity-70');
             btnText.innerText = '启动 AI 规划引擎';
-            lucide.createIcons();
-        }
+            lucide.createIcons(); }
     }
 
     function buildAiSystemPrompt(userGoal) {
         const freeSlotsSummary = analyzeFreeSlots();
+        const currentWeek = getCurrentWeekNumber();
+        return `你是精通时间统筹与学术排程的专家 AI。你的任务是根据用户需求，在现有课程表的空余时段中安排新任务。系统支持<strong>跨周排程</strong>。
 
-        return `你是精通时间统筹与学术排程的专家 AI。你的任务是根据用户需求，在现有课程表的空余时段中安排新任务。
+【核心数据】
+学期总周数: ${TOTAL_WEEKS}周
+当前显示周: 第${currentWeek}周 (周一日期: ${currentMonday.toISOString().split('T')[0]})
+已有日程清单 (JSON):
+${JSON.stringify(courses.map(c => ({ title: c.title, dayOfWeek: c.dayOfWeek, startTime: c.startTime, endTime: c.endTime, weeks: c.weeks || generateAllWeeks(), location: c.location })), null, 2)}
 
-    【核心数据】
-    当前显示周周一日期: ${currentMonday.toISOString().split('T')[0]}
-    已有日程清单 (JSON):
-    ${JSON.stringify(courses.map(c => ({ title: c.title, dayOfWeek: c.dayOfWeek, startTime: c.startTime, endTime: c.endTime, location: c.location })), null, 2)}
+【空闲时段分析（基于当前周）】
+${freeSlotsSummary}
 
-    【空闲时段分析】
-    ${freeSlotsSummary}
+【用户需求】
+"${userGoal}"
 
-    【用户需求】
-    "${userGoal}"
+【排程约束法则 - 必须严格遵守】
+1. ⚠️ 时段绝对不可重叠：你安排的 startTime 和 endTime 必须与已有同星期的任务完全错开。
+2. 🚫 睡眠禁区：23:00 到次日 08:00 禁止安排任何任务。
+3. 📏 时长智能解析：从用户描述中提取时长。若用户说"3小时"则安排3小时；"2-3小时"取2.5小时；未明确时长默认1.5小时。
+4. 🎯 优先级与偏好：若用户指定了时间偏好（如"下午"、"早上"、"避开周三"），请严格遵循。
+5. 📅 跨周排程：用户可能指定周次范围（如"第1-8周"、"前8周"、"全学期"、"第5-12周"等）。weeks 字段应为数字数组，如 [1,2,3,...,8]。若用户未指定周次，默认覆盖全部 ${TOTAL_WEEKS} 周。
+6. 🔢 dayOfWeek 编码：1=周一, 2=周二, 3=周三, 4=周四, 5=周五, 6=周六, 7=周日。
+7. 📐 合理分布：避免将长任务切得过碎，尽量安排在连续时段内。
 
-    【排程约束法则 - 必须严格遵守】
-    1. ⚠️ 时段绝对不可重叠：你安排的 startTime 和 endTime 必须与已有同星期的任务完全错开，不得有任何交叉。
-    2. 🚫 睡眠禁区：23:00 到次日 08:00 禁止安排任何任务。
-    3. 📏 时长智能解析：从用户描述中提取时长需求。若用户说"3小时"，则安排3小时；若说"2-3小时"，取中间值2.5小时；若未明确时长，默认安排1.5小时。
-    4. 🎯 优先级与偏好：若用户指定了时间偏好（如"下午"、"早上"、"避开周三"），请严格遵循。
-    5. 📅 合理分布：避免将长任务切得过碎，尽量安排在连续时段内。
-    6. 🔢 dayOfWeek 编码：1=周一, 2=周二, 3=周三, 4=周四, 5=周五, 6=周六, 7=周日。
-
-    【强制输出规范】
-    你必须返回一个纯 JSON 对象，禁止包含任何 markdown 代码块标记、禁止任何额外说明文字。格式如下：
+【强制输出规范】
+你必须返回一个纯 JSON 对象，禁止包含任何 markdown 代码块标记、禁止任何额外说明文字。格式如下：
+{
+  "reasoning": "详细的推演过程（200-400字）：说明如何分析空闲时段、如何匹配用户需求（含周次范围解析）、以及最终决策依据。",
+  "message": "给用户的简洁结论（50-100字）",
+  "plans": [
     {
-      "reasoning": "详细的推演过程（200-400字）：说明你是如何分析空闲时段、如何匹配用户需求、以及最终决策的依据。",
-      "message": "给用户的简洁结论（50-100字）",
-      "plans": [
-        {
-          "title": "任务名称",
-          "dayOfWeek": 3,
-          "startTime": "14:00",
-          "endTime": "16:00",
-          "color": "#f59e0b",
-          "location": "建议地点（可选，可留空字符串）"
-        }
-      ]
+      "title": "任务名称",
+      "dayOfWeek": 3,
+      "startTime": "14:00",
+      "endTime": "16:00",
+      "weeks": [1,2,3,4,5,6,7,8],
+      "color": "#f59e0b",
+      "location": "建议地点（可选，可留空字符串）"
     }
-    若用户需求无法在当前课表中安排（时间完全被占满），请在 reasoning 中说明，并将 plans 设为空数组 []，在 message 中给出建议。`;
+  ]
+}
+若用户需求无法在当前课表中安排，请在 reasoning 中说明，并将 plans 设为空数组 []，在 message 中给出建议。`;
     }
 
     function analyzeFreeSlots() {
         const dayNames = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+        const weekNum = getCurrentWeekNumber();
         let summary = '';
         for (let d = 1; d <= 7; d++) {
             const dayCourses = courses
-                .filter(c => c.dayOfWeek === d)
+                .filter(c => c.dayOfWeek === d && courseActiveInWeek(c, weekNum))
                 .sort((a, b) => a.startTime.localeCompare(b.startTime));
-            if (dayCourses.length === 0) {
-                summary += `${dayNames[d]}: 全天空闲 (08:00-23:00)\n`;
-            } else {
+            if (dayCourses.length === 0) summary += `${dayNames[d]}: 全天空闲 (08:00-23:00)\n`;
+            else {
                 const busySlots = dayCourses.map(c => `${c.startTime}-${c.endTime}(${c.title})`).join(', ');
-                summary += `${dayNames[d]}: 已占用时段=[${busySlots}]`;
+                summary += `${dayNames[d]}: 已占用=[${busySlots}]`;
                 const freeGaps = [];
                 let cursor = '08:00';
-                for (const c of dayCourses) {
-                    if (cursor < c.startTime) freeGaps.push(`${cursor}-${c.startTime}`);
-                    cursor = c.endTime > cursor ? c.endTime : cursor;
-                }
+                for (const c of dayCourses) { if (cursor < c.startTime) freeGaps.push(`${cursor}-${c.startTime}`);
+                    cursor = c.endTime > cursor ? c.endTime : cursor; }
                 if (cursor < '23:00') freeGaps.push(`${cursor}-23:00`);
                 if (freeGaps.length > 0) summary += ` | 空闲=[${freeGaps.join(', ')}]`;
                 summary += '\n';
@@ -1964,42 +1710,25 @@
     function processAiResponse(rawContent, userGoal) {
         let jsonStr = rawContent;
         const jsonMatch = rawContent.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-            jsonStr = jsonMatch[0];
-        } else {
-            throw new Error('AI 未返回有效的 JSON 格式响应');
-        }
-
+        if (jsonMatch) jsonStr = jsonMatch[0];
+        else throw new Error('AI 未返回有效的 JSON 格式响应');
         let parsed;
-        try {
-            parsed = JSON.parse(jsonStr);
-        } catch (parseErr) {
-            throw new Error(`JSON 解析失败: ${parseErr.message}\n原始响应片段: ${jsonStr.slice(0, 300)}`);
-        }
-
-        if (!parsed.plans || !Array.isArray(parsed.plans)) {
-            throw new Error('AI 响应缺少 plans 数组');
-        }
-
+        try { parsed = JSON.parse(jsonStr); } catch (parseErr) { throw new Error(
+                `JSON 解析失败: ${parseErr.message}\n原始响应片段: ${jsonStr.slice(0,300)}`); }
+        if (!parsed.plans || !Array.isArray(parsed.plans)) throw new Error('AI 响应缺少 plans 数组');
         const thinkingBox = document.getElementById('thinkingBox');
         const thinkingContent = document.getElementById('thinkingContent');
         thinkingBox.classList.remove('hidden');
         thinkingBox.classList.add('animate-slide-down');
-
         let outputHTML =
             `<div class="mb-3"><span class="text-indigo-600 font-bold block mb-1">🧠 【思考推演链】</span><span class="opacity-85 text-[11px] leading-relaxed">${parsed.reasoning || '（AI 未提供详细推演过程）'}</span></div>`;
         outputHTML +=
             `<div class="mb-3"><span class="text-emerald-600 font-bold block mb-1">💬 【助理结论】</span><span class="text-[11px] leading-relaxed">${parsed.message || '已为您安排以下任务'}</span></div>`;
-
-        if (parsed.plans.length > 0) {
-            outputHTML +=
-                `<div><span class="text-amber-600 font-bold block mb-1">📋 【新增计划】</span><span class="text-[11px]">共 ${parsed.plans.length} 个任务切片已添加至课表</span></div>`;
-        } else {
-            outputHTML +=
-                `<div><span class="text-rose-600 font-bold block mb-1">⚠️ 【无法安排】</span><span class="text-[11px]">当前课表空余时段不足以满足需求，请调整时间偏好或减少任务时长。</span></div>`;
-        }
+        if (parsed.plans.length > 0) outputHTML +=
+            `<div><span class="text-amber-600 font-bold block mb-1">📋 【新增计划】</span><span class="text-[11px]">共 ${parsed.plans.length} 个任务切片已添加至课表（含跨周排程）</span></div>`;
+        else outputHTML +=
+            `<div><span class="text-rose-600 font-bold block mb-1">⚠️ 【无法安排】</span><span class="text-[11px]">当前课表空余时段不足以满足需求，请调整时间偏好或减少任务时长。</span></div>`;
         thinkingContent.innerHTML = outputHTML;
-
         const newPlans = parsed.plans || [];
         let addedCount = 0;
         newPlans.forEach(p => {
@@ -2008,65 +1737,49 @@
             if (p.startTime >= p.endTime) return;
             if (p.startTime < '08:00' && p.endTime <= '08:00') return;
             if (p.startTime >= '23:00') return;
-
             p.id = 'ai_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
             p.isAiGenerated = true;
             if (!p.color) p.color = '#f59e0b';
             if (!p.location) p.location = '';
+            if (!p.weeks || !Array.isArray(p.weeks) || p.weeks.length === 0) p.weeks = generateAllWeeks();
+            p.weeks = p.weeks.filter(w => w >= 1 && w <= TOTAL_WEEKS).sort((a, b) => a - b);
+            if (p.weeks.length === 0) p.weeks = generateAllWeeks();
             courses.push(p);
             addedCount++;
         });
-
-        if (addedCount > 0) {
-            renderCoursesList();
+        if (addedCount > 0) { renderCoursesList();
             persistCourses();
             triggerSuccessConfetti();
             showErrorAlert(false);
-            showToast(`AI 推演成功！已添加 ${addedCount} 个任务`, 'success');
-        } else if (newPlans.length === 0) {
+            showToast(`AI 推演成功！已添加 ${addedCount} 个跨周任务`, 'success'); } else if (newPlans.length === 0) {
             showErrorAlert(false);
-            showToast('AI 认为当前课表无法满足需求，请调整', 'error');
-        } else {
-            showErrorAlert(true, 'AI 返回的计划未通过验证，请重试');
-        }
+            showToast('AI 认为当前课表无法满足需求，请调整', 'error'); } else { showErrorAlert(true,
+            'AI 返回的计划未通过验证，请重试'); }
     }
 
     async function simulateDemoPlanning(goal, btn, btnText) {
         await new Promise(r => setTimeout(r, 1200));
-
         const thinkingBox = document.getElementById('thinkingBox');
         const thinkingContent = document.getElementById('thinkingContent');
         thinkingBox.classList.remove('hidden');
         thinkingBox.classList.add('animate-slide-down');
-
         const demoReasoning = `【演示模式 - 无 API Key】
-    1. 解析用户需求："${goal.slice(0, 80)}${goal.length > 80 ? '...' : ''}"
-    2. 扫描现有课表：共 ${courses.length} 个已有日程
-    3. 查找空档：分析周一至周日 08:00-23:00 的空余时段
-    4. 匹配时长与偏好：尝试在空闲时段中匹配合适的时间块
-    5. 生成排程方案（模拟）`;
-
+1. 解析用户需求："${goal.slice(0,80)}${goal.length > 80 ? '...' : ''}"
+2. 扫描现有课表：共 ${courses.length} 个已有日程
+3. 分析周次范围：解析用户描述的周次偏好（默认全学期${TOTAL_WEEKS}周）
+4. 查找空档：分析周一至周日 08:00-23:00 的空余时段
+5. 匹配时长与偏好：尝试在空闲时段中匹配合适的时间块
+6. 生成跨周排程方案（模拟）`;
         thinkingContent.innerHTML = `
       <div class="mb-3"><span class="text-indigo-600 font-bold block mb-1">🧠 【思考推演链】(演示)</span><span class="opacity-85 text-[11px] leading-relaxed">${demoReasoning}</span></div>
-      <div class="mb-3"><span class="text-emerald-600 font-bold block mb-1">💬 【助理结论】</span><span class="text-[11px] leading-relaxed">这是演示模式下的模拟排程。请配置 API Key 以获得真实的 AI 推理排程。</span></div>
-    `;
-
-        const demoPlan = {
-            id: 'demo_' + Date.now(),
-            title: '📋 模拟排程任务',
-            dayOfWeek: 4,
-            startTime: '15:00',
-            endTime: '17:00',
-            color: '#f59e0b',
-            location: '建议：自习室',
-            isAiGenerated: true
-        };
+      <div class="mb-3"><span class="text-emerald-600 font-bold block mb-1">💬 【助理结论】</span><span class="text-[11px] leading-relaxed">这是演示模式下的模拟排程（含跨周支持）。请配置 API Key 以获得真实的 AI 推理排程。</span></div>`;
+        const demoPlan = { id: 'demo_' + Date.now(), title: '📋 模拟跨周排程任务', dayOfWeek: 4, startTime: '15:00',
+            endTime: '17:00', color: '#f59e0b', location: '建议：自习室', weeks: generateAllWeeks(), isAiGenerated: true };
         courses.push(demoPlan);
         renderCoursesList();
         persistCourses();
         triggerSuccessConfetti();
-        showToast('演示模式：已添加模拟任务（请配置 API Key 获得真实推理）', 'success');
-
+        showToast('演示模式：已添加模拟跨周任务（请配置 API Key 获得真实推理）', 'success');
         btn.disabled = false;
         btn.classList.remove('opacity-70');
         btnText.innerText = '启动 AI 规划引擎';
@@ -2076,84 +1789,49 @@
     // ==================== 辅助 UI 函数 ====================
     function showErrorAlert(show, txt = '') {
         const alert = document.getElementById('errorAlert');
-        if (show) {
-            alert.classList.remove('hidden');
+        if (show) { alert.classList.remove('hidden');
             alert.classList.add('animate-slide-down');
-            document.getElementById('errorMsg').innerText = txt;
-        } else {
-            alert.classList.add('hidden');
-        }
+            document.getElementById('errorMsg').innerText = txt; } else alert.classList.add('hidden');
     }
 
     function showToast(msg, type = 'success') {
         const existingToasts = document.querySelectorAll('.toast-notification');
         existingToasts.forEach(t => t.remove());
-
         const t = document.createElement('div');
         t.className =
-            `toast-notification fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-5 py-3 rounded-full shadow-xl text-white font-bold text-xs flex items-center gap-2 transition-all duration-300 -translate-y-12 opacity-0 ${
-        type === 'success' ? 'bg-slate-900' : 'bg-rose-600'
-      }`;
+            `toast-notification fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-5 py-3 rounded-full shadow-xl text-white font-bold text-xs flex items-center gap-2 transition-all duration-300 -translate-y-12 opacity-0 ${type === 'success' ? 'bg-slate-900' : 'bg-rose-600'}`;
         t.innerHTML =
             `<i data-lucide="${type === 'success' ? 'check-circle-2' : 'alert-circle'}" class="w-4 h-4"></i><span>${msg}</span>`;
         document.body.appendChild(t);
         lucide.createIcons();
-
-        requestAnimationFrame(() => {
-            t.classList.remove('-translate-y-12', 'opacity-0');
-            t.classList.add('translate-y-0', 'opacity-100');
-        });
-
-        setTimeout(() => {
-            t.classList.add('-translate-y-12', 'opacity-0');
-            setTimeout(() => t.remove(), 350);
-        }, 2800);
+        requestAnimationFrame(() => { t.classList.remove('-translate-y-12', 'opacity-0');
+            t.classList.add('translate-y-0', 'opacity-100'); });
+        setTimeout(() => { t.classList.add('-translate-y-12', 'opacity-0');
+            setTimeout(() => t.remove(), 350); }, 2800);
     }
 
     function triggerSuccessConfetti() {
-        confetti({
-            particleCount: 80,
-            spread: 55,
-            origin: { y: 0.75, x: 0.5 },
-            colors: ['#4f46e5', '#8b5cf6', '#f59e0b', '#10b981', '#3b82f6']
-        });
-        setTimeout(() => {
-            confetti({
-                particleCount: 40,
-                spread: 35,
-                origin: { y: 0.8, x: 0.4 }
-            });
-        }, 200);
+        confetti({ particleCount: 80, spread: 55, origin: { y: 0.75, x: 0.5 }, colors: ['#4f46e5', '#8b5cf6', '#f59e0b',
+                '#10b981', '#3b82f6'] });
+        setTimeout(() => { confetti({ particleCount: 40, spread: 35, origin: { y: 0.8, x: 0.4 } }); }, 200);
     }
 
     // ==================== 键盘快捷键 ====================
     document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') {
-            const panel = document.getElementById('addCoursePanel');
-            if (!panel.classList.contains('hidden')) {
-                closeAddCourseForm();
-            }
-            const importPanel = document.getElementById('importPreviewPanel');
-            if (!importPanel.classList.contains('hidden')) {
-                closeImportPreview();
-            }
-            const apiPanel = document.getElementById('apiPanel');
-            if (!apiPanel.classList.contains('hidden') && e.target.tagName !== 'INPUT') {
-                toggleApiSettings();
-            }
-            const menu = document.getElementById('importExportMenu');
-            if (menu && !menu.classList.contains('hidden')) {
-                menu.classList.add('hidden');
-            }
+            const panel = document.getElementById('addCoursePanel'); if (!panel.classList.contains(
+            'hidden')) closeAddCourseForm();
+            const importPanel = document.getElementById('importPreviewPanel'); if (!importPanel.classList
+                .contains('hidden')) closeImportPreview();
+            const apiPanel = document.getElementById('apiPanel'); if (!apiPanel.classList.contains('hidden') && e
+                .target.tagName !== 'INPUT') toggleApiSettings();
+            const menu = document.getElementById('importExportMenu'); if (menu && !menu.classList.contains(
+                'hidden')) menu.classList.add('hidden');
         }
-        if (e.ctrlKey && e.key === 'n') {
-            e.preventDefault();
-            openAddCourseForm();
-        }
-        if (e.ctrlKey && e.key === 't') {
-            e.preventDefault();
-            jumpToTodayWeek();
-        }
+        if (e.ctrlKey && e.key === 'n') { e.preventDefault();
+            openAddCourseForm(); }
+        if (e.ctrlKey && e.key === 't') { e.preventDefault();
+            jumpToTodayWeek(); }
     });
 </script>
 </body>
