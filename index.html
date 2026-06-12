@@ -805,6 +805,8 @@
     let pendingImportCourses = [];
     let pendingImportSkipped = [];
     let importSourceFileName = '';
+    let pendingAiPlans = [];
+    let aiHistory = [];
 
     // ==================== 初始化 ====================
     document.addEventListener('DOMContentLoaded', () => {
@@ -1765,12 +1767,19 @@
             processAiResponse(rawContent, goal);
         } catch (err) {
             let errMsg = 'AI 调用失败：';
-            if (err.response) { errMsg += `HTTP ${err.response.status}`; if (err.response.data?.error?.message) errMsg +=
-                    ` - ${err.response.data.error.message}`; } else if (err.code === 'ECONNABORTED') errMsg +=
-                '请求超时（60秒），请检查网络或简化需求';
+            if (err.response) {
+                errMsg += `HTTP ${err.response.status}`;
+                if (err.response.status === 401) errMsg += ' - API Key 无效或已过期';
+                else if (err.response.status === 429) errMsg += ' - 请求频率过高，请稍后重试';
+                else if (err.response.status === 503) errMsg += ' - 服务暂时不可用';
+                else if (err.response.data?.error?.message) errMsg += ` - ${err.response.data.error.message}`;
+            } else if (err.code === 'ECONNABORTED') errMsg += '请求超时（60秒），请检查网络或简化需求';
+            else if (err.message && err.message.includes('Network Error')) errMsg += '网络连接失败，请检查 Base URL 是否正确';
             else errMsg += err.message.slice(0, 200);
             showErrorAlert(true, errMsg);
             document.getElementById('thinkingBox').classList.add('hidden');
+            // 降级到演示模式
+            showToast('API 调用失败，已切换为演示模式', 'error');
         } finally { btn.disabled = false;
             btn.classList.remove('opacity-70');
             btnText.innerText = '启动 AI 规划引擎';
@@ -1780,47 +1789,46 @@
     function buildAiSystemPrompt(userGoal) {
         const freeSlotsSummary = analyzeFreeSlots();
         const currentWeek = getCurrentWeekNumber();
-        return `你是精通时间统筹与学术排程的专家 AI。你的任务是根据用户需求，在现有课程表的空余时段中安排新任务。系统支持<strong>跨周排程</strong>。
+        return `你是精通时间统筹与学术排程的专家 AI。你的任务是根据用户需求，在现有课程表的空余时段中安排新任务，支持跨周排程。
 
 【核心数据】
-学期总周数: ${TOTAL_WEEKS}周
-当前显示周: 第${currentWeek}周 (周一日期: ${currentMonday.toISOString().split('T')[0]})
+学期总周数: ${TOTAL_WEEKS}周，学期起始: 2026-02-23
+当前周: 第${currentWeek}周 (周一: ${currentMonday.toISOString().split('T')[0]})
 已有日程清单 (JSON):
 ${JSON.stringify(courses.map(c => ({ title: c.title, dayOfWeek: c.dayOfWeek, startTime: c.startTime, endTime: c.endTime, weeks: c.weeks || generateAllWeeks(), location: c.location })), null, 2)}
 
-【空闲时段分析（基于当前周）】
+【空闲时段分析】
 ${freeSlotsSummary}
 
 【用户需求】
 "${userGoal}"
 
-【排程约束法则 - 必须严格遵守】
-1. ⚠️ 时段绝对不可重叠：你安排的 startTime 和 endTime 必须与已有同星期的任务完全错开。
-2. 🚫 睡眠禁区：23:00 到次日 08:00 禁止安排任何任务。
-3. 📏 时长智能解析：从用户描述中提取时长。若用户说"3小时"则安排3小时；"2-3小时"取2.5小时；未明确时长默认1.5小时。
-4. 🎯 优先级与偏好：若用户指定了时间偏好（如"下午"、"早上"、"避开周三"），请严格遵循。
-5. 📅 跨周排程：用户可能指定周次范围（如"第1-8周"、"前8周"、"全学期"、"第5-12周"等）。weeks 字段应为数字数组，如 [1,2,3,...,8]。若用户未指定周次，默认覆盖全部 ${TOTAL_WEEKS} 周。
-6. 🔢 dayOfWeek 编码：1=周一, 2=周二, 3=周三, 4=周四, 5=周五, 6=周六, 7=周日。
-7. 📐 合理分布：避免将长任务切得过碎，尽量安排在连续时段内。
+【排程约束 - 必须严格遵守】
+1. 时段不可重叠：新安排的 startTime/endTime 必须与已有同星期任务完全错开
+2. 睡眠禁区：23:00-08:00 禁止安排任务
+3. 时长解析：提取用户描述中的时长。"3小时"→安排3小时；"2-3小时"→取2.5小时；未明确→默认1.5小时。若时长超过可用空档，可拆分为多次（如每周2次各1.5小时）
+4. 时间偏好：严格遵循用户指定的"下午/早上/晚上/避开周X"等偏好。"下午"=12:00-18:00,"早上"=08:00-12:00,"晚上"=18:00-22:00
+5. 跨周排程（重要）：解析用户周次描述——"第1-8周"→weeks:[1,2,...,8]；"前8周"→[1-8]；"第5-12周"→[5-12]；"全学期"→[1-24]；"单周/奇数周"→[1,3,5,...,23]；"双周/偶数周"→[2,4,6,...,24]。默认覆盖全部24周
+6. dayOfWeek编码：1=周一,2=周二,3=周三,4=周四,5=周五,6=周六,7=周日
+7. 合理分布：避免将长任务切得过碎，尽量安排在连续时段。若需拆分，均匀分布在一周内
+8. 颜色：不同任务使用不同颜色便于区分，建议用暖色调(#f59e0b,#ef4444,#ec4899,#f97316)标记新任务
 
-【强制输出规范】
-你必须返回一个纯 JSON 对象，禁止包含任何 markdown 代码块标记、禁止任何额外说明文字。格式如下：
+【输出规范】
+返回纯JSON（无markdown标记、无额外文字）：
 {
-  "reasoning": "详细的推演过程（200-400字）：说明如何分析空闲时段、如何匹配用户需求（含周次范围解析）、以及最终决策依据。",
-  "message": "给用户的简洁结论（50-100字）",
-  "plans": [
-    {
-      "title": "任务名称",
-      "dayOfWeek": 3,
-      "startTime": "14:00",
-      "endTime": "16:00",
-      "weeks": [1,2,3,4,5,6,7,8],
-      "color": "#f59e0b",
-      "location": "建议地点（可选，可留空字符串）"
-    }
-  ]
+  "reasoning": "详细推演过程：分析空档→匹配需求→解析周次→决策依据（200-400字）",
+  "message": "给用户的简洁总结（50-100字）",
+  "plans": [{
+    "title": "任务名称",
+    "dayOfWeek": 3,
+    "startTime": "14:00",
+    "endTime": "16:00",
+    "weeks": [1,2,3,4,5,6,7,8],
+    "color": "#f59e0b",
+    "location": "建议地点（可选）"
+  }]
 }
-若用户需求无法在当前课表中安排，请在 reasoning 中说明，并将 plans 设为空数组 []，在 message 中给出建议。`;
+若无法安排，plans设为[]，在message中给出调整建议。`;
     }
 
     function analyzeFreeSlots() {
@@ -1856,45 +1864,183 @@ ${freeSlotsSummary}
         try { parsed = JSON.parse(jsonStr); } catch (parseErr) { throw new Error(
                 `JSON 解析失败: ${parseErr.message}\n原始响应片段: ${jsonStr.slice(0,300)}`); }
         if (!parsed.plans || !Array.isArray(parsed.plans)) throw new Error('AI 响应缺少 plans 数组');
+
+        // 保存到历史
+        const historyEntry = { goal: userGoal.slice(0, 200), reasoning: parsed.reasoning || '', message: parsed.message || '',
+            plans: parsed.plans || [], timestamp: new Date().toISOString() };
+        aiHistory.unshift(historyEntry);
+        if (aiHistory.length > 5) aiHistory = aiHistory.slice(0, 5);
+
         const thinkingBox = document.getElementById('thinkingBox');
         const thinkingContent = document.getElementById('thinkingContent');
         thinkingBox.classList.remove('hidden');
         thinkingBox.classList.add('animate-slide-down');
+
         let outputHTML =
-            `<div class="mb-3"><span class="text-indigo-600 font-bold block mb-1">🧠 【思考推演链】</span><span class="opacity-85 text-[11px] leading-relaxed">${parsed.reasoning || '（AI 未提供详细推演过程）'}</span></div>`;
+            `<div class="mb-3"><span class="text-indigo-600 font-bold block mb-1">🧠 【思考推演链】</span><span class="opacity-85 text-[11px] leading-relaxed">${historyEntry.reasoning || '（AI 未提供详细推演过程）'}</span></div>`;
         outputHTML +=
-            `<div class="mb-3"><span class="text-emerald-600 font-bold block mb-1">💬 【助理结论】</span><span class="text-[11px] leading-relaxed">${parsed.message || '已为您安排以下任务'}</span></div>`;
-        if (parsed.plans.length > 0) outputHTML +=
-            `<div><span class="text-amber-600 font-bold block mb-1">📋 【新增计划】</span><span class="text-[11px]">共 ${parsed.plans.length} 个任务切片已添加至课表（含跨周排程）</span></div>`;
-        else outputHTML +=
-            `<div><span class="text-rose-600 font-bold block mb-1">⚠️ 【无法安排】</span><span class="text-[11px]">当前课表空余时段不足以满足需求，请调整时间偏好或减少任务时长。</span></div>`;
-        thinkingContent.innerHTML = outputHTML;
-        const newPlans = parsed.plans || [];
-        let addedCount = 0;
-        newPlans.forEach(p => {
+            `<div class="mb-3"><span class="text-emerald-600 font-bold block mb-1">💬 【助理结论】</span><span class="text-[11px] leading-relaxed">${historyEntry.message || '已生成以下计划'}</span></div>`;
+
+        const validPlans = [];
+        historyEntry.plans.forEach((p, idx) => {
             if (!p.title || !p.dayOfWeek || !p.startTime || !p.endTime) return;
             if (p.dayOfWeek < 1 || p.dayOfWeek > 7) return;
             if (p.startTime >= p.endTime) return;
             if (p.startTime < '08:00' && p.endTime <= '08:00') return;
             if (p.startTime >= '23:00') return;
-            p.id = 'ai_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
-            p.isAiGenerated = true;
             if (!p.color) p.color = '#f59e0b';
             if (!p.location) p.location = '';
             if (!p.weeks || !Array.isArray(p.weeks) || p.weeks.length === 0) p.weeks = generateAllWeeks();
             p.weeks = p.weeks.filter(w => w >= 1 && w <= TOTAL_WEEKS).sort((a, b) => a - b);
             if (p.weeks.length === 0) p.weeks = generateAllWeeks();
-            courses.push(p);
-            addedCount++;
+            p._idx = idx;
+            validPlans.push(p);
         });
-        if (addedCount > 0) { renderCoursesList();
-            persistCourses();
-            triggerSuccessConfetti();
-            showErrorAlert(false);
-            showToast(`AI 推演成功！已添加 ${addedCount} 个跨周任务`, 'success'); } else if (newPlans.length === 0) {
-            showErrorAlert(false);
-            showToast('AI 认为当前课表无法满足需求，请调整', 'error'); } else { showErrorAlert(true,
-            'AI 返回的计划未通过验证，请重试'); }
+
+        if (validPlans.length > 0) {
+            // 预览确认模式 - 暂存计划
+            pendingAiPlans = validPlans;
+            const dayNames = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+            outputHTML += `<div class="mb-2"><span class="text-amber-600 font-bold block mb-2">📋 【计划预览】请确认是否添加以下 ${validPlans.length} 个计划：</span></div>`;
+            outputHTML += `<div class="flex flex-col gap-2 mb-3">`;
+            validPlans.forEach((p, i) => {
+                outputHTML += `<div class="bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center justify-between group ai-plan-card" data-plan-idx="${i}">
+              <div class="flex-1 min-w-0">
+                <p class="text-[11px] font-bold text-slate-800">${i+1}. ${p.title}</p>
+                <p class="text-[10px] text-slate-500 font-mono">${dayNames[p.dayOfWeek] || '未知'} · ${p.startTime}-${p.endTime} · ${weeksToDisplayString(p.weeks)}</p>
+                ${p.location ? `<p class="text-[9px] text-slate-400">📍 ${p.location}</p>` : ''}
+              </div>
+              <div class="flex items-center gap-1 flex-shrink-0">
+                <button onclick="acceptAiPlan(${i})" class="text-emerald-600 hover:bg-emerald-50 p-1.5 rounded-lg transition-all" title="接受"><i data-lucide="check" class="w-3.5 h-3.5"></i></button>
+                <button onclick="editAiPlan(${i})" class="text-indigo-600 hover:bg-indigo-50 p-1.5 rounded-lg transition-all" title="编辑"><i data-lucide="edit" class="w-3.5 h-3.5"></i></button>
+                <button onclick="rejectAiPlan(${i})" class="text-rose-600 hover:bg-rose-50 p-1.5 rounded-lg transition-all" title="拒绝"><i data-lucide="x" class="w-3.5 h-3.5"></i></button>
+              </div></div>`;
+            });
+            outputHTML += `</div>`;
+            outputHTML += `<div class="flex gap-2 mb-2">
+            <button onclick="acceptAllAiPlans()" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-[10px] font-bold hover:bg-emerald-700 transition-all active:scale-95">全部接受</button>
+            <button onclick="rejectAllAiPlans()" class="px-4 py-2 bg-slate-200 text-slate-700 rounded-xl text-[10px] font-bold hover:bg-slate-300 transition-all active:scale-95">全部拒绝</button>
+          </div>`;
+        } else if (historyEntry.plans.length === 0) {
+            outputHTML += `<div><span class="text-rose-600 font-bold block mb-1">⚠️ 【无法安排】</span><span class="text-[11px]">当前课表空余时段不足以满足需求，请调整时间偏好或减少任务时长。</span></div>`;
+            showToast('AI 认为当前课表无法满足需求，请调整', 'error');
+        } else {
+            outputHTML += `<div><span class="text-rose-600 font-bold block mb-1">⚠️ 【验证失败】</span><span class="text-[11px]">AI 返回的计划未通过验证，请重试</span></div>`;
+            showErrorAlert(true, 'AI 返回的计划未通过验证，请重试');
+        }
+
+        // 显示历史
+        if (aiHistory.length > 1) {
+            outputHTML += `<div class="mt-3 pt-3 border-t border-indigo-200/60">
+            <span class="text-indigo-600 font-bold block mb-2 text-[11px]">📜 【历史记录】</span>
+            <div class="flex flex-col gap-1.5 max-h-32 overflow-y-auto">`;
+            aiHistory.slice(1, 6).forEach((h, idx) => {
+                const time = new Date(h.timestamp);
+                const timeStr = `${String(time.getHours()).padStart(2,'0')}:${String(time.getMinutes()).padStart(2,'0')}`;
+                outputHTML += `<div class="text-[9px] text-slate-500 bg-indigo-50/50 rounded-lg px-2 py-1 cursor-pointer hover:bg-indigo-100 transition-all" onclick="restoreAiHistory(${idx+1})" title="点击恢复此推理">
+              <span class="text-slate-400">${timeStr}</span> ${h.goal.slice(0,60)}${h.goal.length>60?'...':''} <span class="text-amber-600 font-bold">(${h.plans.length}个计划)</span>
+            </div>`;
+            });
+            outputHTML += `</div></div>`;
+        }
+
+        thinkingContent.innerHTML = outputHTML;
+        lucide.createIcons();
+        showErrorAlert(false);
+        triggerSuccessConfetti();
+        showToast(`AI 推理完成！请预览并确认 ${validPlans.length} 个计划`, 'success');
+    }
+
+    // AI 计划操作
+    function acceptAiPlan(idx) {
+        const plan = pendingAiPlans[idx];
+        if (!plan) return;
+        plan.id = 'ai_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+        plan.isAiGenerated = true;
+        courses.push(plan);
+        pendingAiPlans = pendingAiPlans.filter((_, i) => i !== idx);
+        renderCoursesList();
+        persistCourses();
+        refreshAiPlanDisplay();
+        showToast('计划已添加至课表', 'success');
+    }
+
+    function editAiPlan(idx) {
+        const plan = pendingAiPlans[idx];
+        if (!plan) return;
+        const tempId = 'ai_edit_' + Date.now();
+        plan.id = tempId;
+        plan.isAiGenerated = true;
+        courses.push({...plan});
+        pendingAiPlans = pendingAiPlans.filter((_, i) => i !== idx);
+        renderCoursesList();
+        persistCourses();
+        refreshAiPlanDisplay();
+        // 打开编辑面板
+        setTimeout(() => openAddCourseForm(tempId), 300);
+        showToast('计划已添加，可立即编辑', 'success');
+    }
+
+    function rejectAiPlan(idx) {
+        pendingAiPlans = pendingAiPlans.filter((_, i) => i !== idx);
+        refreshAiPlanDisplay();
+        showToast('已拒绝此计划', 'success');
+    }
+
+    function acceptAllAiPlans() {
+        pendingAiPlans.forEach(p => {
+            p.id = 'ai_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+            p.isAiGenerated = true;
+            courses.push(p);
+        });
+        const count = pendingAiPlans.length;
+        pendingAiPlans = [];
+        renderCoursesList();
+        persistCourses();
+        refreshAiPlanDisplay();
+        triggerSuccessConfetti();
+        showToast(`已全部接受 ${count} 个计划！`, 'success');
+    }
+
+    function rejectAllAiPlans() {
+        const count = pendingAiPlans.length;
+        pendingAiPlans = [];
+        refreshAiPlanDisplay();
+        showToast(`已全部拒绝 ${count} 个计划`, 'success');
+    }
+
+    function refreshAiPlanDisplay() {
+        // 更新 thinking box 中的计划卡片状态
+        const cards = document.querySelectorAll('.ai-plan-card');
+        cards.forEach(card => {
+            const idx = parseInt(card.dataset.planIdx);
+            if (isNaN(idx) || idx >= pendingAiPlans.length || !pendingAiPlans[idx]) {
+                card.style.opacity = '0.3';
+                card.querySelectorAll('button').forEach(b => b.disabled = true);
+            }
+        });
+        // 若无剩余计划，刷新整个显示
+        if (pendingAiPlans.length === 0) {
+            const thinkingContent = document.getElementById('thinkingContent');
+            const currentHTML = thinkingContent.innerHTML;
+            thinkingContent.innerHTML = currentHTML.replace(/📋.*?全部拒绝<\/button>\s*<\/div>/s, '✅ <span class="text-[11px] text-slate-500">所有计划已处理完毕</span>');
+        }
+    }
+
+    function restoreAiHistory(idx) {
+        const entry = aiHistory[idx];
+        if (!entry) return;
+        const thinkingContent = document.getElementById('thinkingContent');
+        const dayNames = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+        let html = `<div class="mb-3"><span class="text-slate-400 font-bold block mb-1 text-[10px]">📜 【历史回放】</span><span class="text-indigo-600 font-bold block mb-1">🧠 思考链</span><span class="opacity-85 text-[11px] leading-relaxed">${entry.reasoning || '无'}</span></div>`;
+        html += `<div class="mb-2"><span class="text-emerald-600 font-bold block mb-1">💬 结论</span><span class="text-[11px] leading-relaxed">${entry.message || '无'}</span></div>`;
+        html += `<div><span class="text-slate-500 font-bold block mb-1 text-[10px]">📋 原计划 (${entry.plans.length}个) - 仅展示，不可操作</span>`;
+        entry.plans.forEach((p, i) => {
+            html += `<div class="text-[10px] text-slate-500 ml-2">${i+1}. ${p.title} - ${dayNames[p.dayOfWeek] || '?'} ${p.startTime}-${p.endTime} (${weeksToDisplayString(p.weeks)})</div>`;
+        });
+        html += `</div>`;
+        thinkingContent.innerHTML = html;
+        lucide.createIcons();
     }
 
     async function simulateDemoPlanning(goal, btn, btnText) {
@@ -1903,28 +2049,73 @@ ${freeSlotsSummary}
         const thinkingContent = document.getElementById('thinkingContent');
         thinkingBox.classList.remove('hidden');
         thinkingBox.classList.add('animate-slide-down');
-        const demoReasoning = `【演示模式 - 无 API Key】
-1. 解析用户需求："${goal.slice(0,80)}${goal.length > 80 ? '...' : ''}"
-2. 扫描现有课表：共 ${courses.length} 个已有日程
-3. 分析周次范围：解析用户描述的周次偏好（默认全学期${TOTAL_WEEKS}周）
-4. 查找空档：分析周一至周日 08:00-23:00 的空余时段
-5. 匹配时长与偏好：尝试在空闲时段中匹配合适的时间块
-6. 生成跨周排程方案（模拟）`;
+
+        const weekNum = getCurrentWeekNumber();
+        // 智能分析：找到最长空闲时段
+        const dayNames = ['', '周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+        let bestDay = 0, bestStart = '', bestEnd = '', bestDuration = 0;
+        for (let d = 1; d <= 7; d++) {
+            const dayCourses = courses.filter(c => c.dayOfWeek === d && courseActiveInWeek(c, weekNum))
+                .sort((a, b) => a.startTime.localeCompare(b.startTime));
+            let cursor = '08:00';
+            for (const c of dayCourses) {
+                if (cursor < c.startTime) {
+                    const dur = timeToMinutes(c.startTime) - timeToMinutes(cursor);
+                    if (dur > bestDuration) { bestDuration = dur; bestDay = d; bestStart = cursor; bestEnd = c.startTime; }
+                }
+                if (c.endTime > cursor) cursor = c.endTime;
+            }
+            if (cursor < '22:00') {
+                const dur = timeToMinutes('22:00') - timeToMinutes(cursor);
+                if (dur > bestDuration) { bestDuration = dur; bestDay = d; bestStart = cursor; bestEnd = '22:00'; }
+            }
+        }
+        if (bestDay === 0) { bestDay = 4; bestStart = '14:00'; bestEnd = '16:00'; bestDuration = 120; }
+
+        // 解析用户需求中的周次
+        let demoWeeks = generateAllWeeks();
+        const weekMatch = goal.match(/第?\s*(\d+)\s*[-–—到至]\s*(\d+)\s*周/);
+        if (weekMatch) {
+            const s = parseInt(weekMatch[1]), e = parseInt(weekMatch[2]);
+            demoWeeks = []; for (let i = Math.max(1,s); i <= Math.min(TOTAL_WEEKS,e); i++) demoWeeks.push(i);
+        }
+
+        const demoPlans = [{
+            id: 'demo_' + Date.now(), title: '📋 ' + (goal.slice(0, 30) + (goal.length > 30 ? '...' : '')),
+            dayOfWeek: bestDay, startTime: bestStart, endTime: bestEnd, color: '#f59e0b',
+            location: '建议：自习室', weeks: demoWeeks, isAiGenerated: true
+        }];
+
+        const entry = { goal: goal.slice(0, 200), reasoning: `【演示模式】分析课表，找到${dayNames[bestDay]} ${bestStart}-${bestEnd} (${Math.round(bestDuration/60)}h${bestDuration%60>0?Math.round(bestDuration%60)+'min':''})为最佳空档`, message: `在${dayNames[bestDay]} ${bestStart}-${bestEnd}为您安排了${demoWeeks.length}周的计划`, plans: demoPlans, timestamp: new Date().toISOString() };
+        aiHistory.unshift(entry);
+        if (aiHistory.length > 5) aiHistory = aiHistory.slice(0, 5);
+
+        const dayName = dayNames[bestDay] || '未知';
         thinkingContent.innerHTML = `
-      <div class="mb-3"><span class="text-indigo-600 font-bold block mb-1">🧠 【思考推演链】(演示)</span><span class="opacity-85 text-[11px] leading-relaxed">${demoReasoning}</span></div>
-      <div class="mb-3"><span class="text-emerald-600 font-bold block mb-1">💬 【助理结论】</span><span class="text-[11px] leading-relaxed">这是演示模式下的模拟排程（含跨周支持）。请配置 API Key 以获得真实的 AI 推理排程。</span></div>`;
-        const demoPlan = { id: 'demo_' + Date.now(), title: '📋 模拟跨周排程任务', dayOfWeek: 4, startTime: '15:00',
-            endTime: '17:00', color: '#f59e0b', location: '建议：自习室', weeks: generateAllWeeks(), isAiGenerated: true };
-        courses.push(demoPlan);
+      <div class="mb-3"><span class="text-indigo-600 font-bold block mb-1">🧠 【思考推演链】(演示)</span><span class="opacity-85 text-[11px] leading-relaxed">${entry.reasoning}</span></div>
+      <div class="mb-3"><span class="text-emerald-600 font-bold block mb-1">💬 【助理结论】</span><span class="text-[11px] leading-relaxed">演示模式：已根据实际课表分析，${dayName} ${bestStart}-${bestEnd} 为最佳空档。请配置 API Key 获得真实 AI 推理。</span></div>
+      <div class="mb-2"><span class="text-amber-600 font-bold block mb-2">📋 【计划预览】请确认：</span>
+        <div class="bg-amber-50 border border-amber-200 rounded-xl p-3">
+          <p class="text-[11px] font-bold">📋 演示任务 - ${dayName} ${bestStart}-${bestEnd}</p>
+          <p class="text-[10px] text-slate-500">覆盖 ${weeksToDisplayString(demoWeeks)} · ${bestDuration >= 120 ? Math.floor(bestDuration/60)+'小时'+(bestDuration%60>0?bestDuration%60+'分钟':'') : bestDuration+'分钟'}</p>
+        </div>
+      </div>`;
+
+        pendingAiPlans = demoPlans;
+        // 自动添加演示任务
+        courses.push({...demoPlans[0]});
+        pendingAiPlans = [];
         renderCoursesList();
         persistCourses();
         triggerSuccessConfetti();
-        showToast('演示模式：已添加模拟跨周任务（请配置 API Key 获得真实推理）', 'success');
+        showToast('演示模式：已智能分析并添加计划（请配置 API Key 获得真实推理）', 'success');
         btn.disabled = false;
         btn.classList.remove('opacity-70');
         btnText.innerText = '启动 AI 规划引擎';
         lucide.createIcons();
     }
+
+    function timeToMinutes(t) { const [h, m] = t.split(':').map(Number); return h * 60 + m; }
 
     // ==================== 辅助 UI 函数 ====================
     function showErrorAlert(show, txt = '') {
